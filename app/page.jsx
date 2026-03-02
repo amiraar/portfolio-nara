@@ -5,7 +5,6 @@
 
 "use client";
 
-import { useRef } from "react";
 import Nav from "@/components/portfolio/Nav";
 import Hero from "@/components/portfolio/Hero";
 import About from "@/components/portfolio/About";
@@ -16,11 +15,9 @@ import Education from "@/components/portfolio/Education";
 import ChatWidget from "@/components/chat/ChatWidget";
 
 export default function HomePage() {
-  const chatWidgetRef = useRef(null);
-
   /**
    * Called by Hero's "Chat with Kaia" CTA button.
-   * Programmatically opens the chat widget.
+   * Programmatically opens the chat widget via custom event.
    */
   function handleChatOpen() {
     // The chat widget manages its own state; we dispatch a custom event
@@ -38,7 +35,7 @@ export default function HomePage() {
         <Skills />
         <Education />
       </main>
-      <ChatWidget ref={chatWidgetRef} />
+      <ChatWidget />
     </>
   );
 }

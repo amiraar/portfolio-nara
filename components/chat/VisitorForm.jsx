@@ -16,12 +16,24 @@ export default function VisitorForm({ onSubmit }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  /** Validate that the email is a real Gmail address (domain check). */
+  function isValidGmail(value) {
+    const trimmed = value.trim().toLowerCase();
+    // Must match: <local-part>@gmail.com with a valid local part
+    return /^[a-zA-Z0-9._%+\-]+@gmail\.com$/.test(trimmed);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
 
     if (!name.trim() || !email.trim()) {
-      setError("Please fill in both fields.");
+      setError("Mohon isi nama dan email kamu.");
+      return;
+    }
+
+    if (!isValidGmail(email)) {
+      setError("Gunakan alamat Gmail yang valid (contoh: nama@gmail.com).");
       return;
     }
 
@@ -76,11 +88,12 @@ export default function VisitorForm({ onSubmit }) {
         />
         <input
           type="email"
-          placeholder="Email kamu"
+          placeholder="Email Gmail kamu"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder-text-muted outline-none focus:border-accent transition-colors"
           disabled={loading}
+          autoComplete="email"
         />
 
         {error && <p className="text-xs text-red-400">{error}</p>}

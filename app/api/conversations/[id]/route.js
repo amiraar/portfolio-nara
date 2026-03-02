@@ -1,6 +1,7 @@
 /**
  * app/api/conversations/[id]/route.js — Get full conversation detail (messages + visitor).
- * GET /api/conversations/:id → protected, returns full message history.
+ * GET /api/conversations/:id → PUBLIC (visitors load their own history via CUID from localStorage).
+ * PATCH /api/conversations/:id → protected (owner only — change status).
  */
 
 import { NextResponse } from "next/server";
@@ -8,13 +9,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 
+/**
+ * GET — public endpoint, no auth required.
+ * ConversationId is a CUID (hard to guess), so security-by-obscurity is acceptable here.
+ * Both the visitor (ChatWidget) and the owner (Dashboard) call this endpoint.
+ */
 export async function GET(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id } = params;
 
     const conversation = await prisma.conversation.findUnique({
