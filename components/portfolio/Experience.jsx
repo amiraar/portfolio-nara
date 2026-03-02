@@ -1,12 +1,14 @@
 /**
  * components/portfolio/Experience.jsx — Work experience timeline.
+ * Content loaded dynamically from DB via usePortfolioContent.
  */
 
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePortfolioContent } from "@/lib/usePortfolioContent";
 
-const EXPERIENCE = [
+const DEFAULT_EXPERIENCE = [
   {
     company: "SoftwareSeni",
     role: "Software Developer",
@@ -52,13 +54,14 @@ const EXPERIENCE = [
 
 export default function Experience() {
   const sectionRef = useRef(null);
+  const { data: items } = usePortfolioContent("experience", DEFAULT_EXPERIENCE);
 
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) el.classList.add("revealed"); },
-      { threshold: 0.1 }
+      { threshold: 0.08 }
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -78,7 +81,7 @@ export default function Experience() {
             <div className="absolute left-[7px] top-2 bottom-2 w-px bg-border hidden sm:block" />
 
             <div className="space-y-10">
-              {EXPERIENCE.map((exp, i) => (
+              {items.map((exp, i) => (
                 <ExperienceItem key={i} exp={exp} />
               ))}
             </div>

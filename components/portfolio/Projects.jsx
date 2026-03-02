@@ -1,12 +1,14 @@
 /**
  * components/portfolio/Projects.jsx — Project cards grid with hover details.
+ * Content loaded dynamically from DB via usePortfolioContent.
  */
 
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePortfolioContent } from "@/lib/usePortfolioContent";
 
-const PROJECTS = [
+const DEFAULT_PROJECTS = [
   {
     name: "Racker",
     type: "Web App",
@@ -80,6 +82,7 @@ const PROJECTS = [
 
 export default function Projects() {
   const sectionRef = useRef(null);
+  const { data: projects } = usePortfolioContent("projects", DEFAULT_PROJECTS);
 
   useEffect(() => {
     const el = sectionRef.current;
@@ -101,7 +104,7 @@ export default function Projects() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {PROJECTS.map((project, i) => (
+          {projects.map((project, i) => (
             <ProjectCard key={i} project={project} />
           ))}
         </div>

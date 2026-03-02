@@ -1,14 +1,26 @@
 /**
  * components/portfolio/Hero.jsx — Hero section with name, tagline, and CTA.
+ * Content is loaded dynamically from DB via usePortfolioContent.
  */
 
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePortfolioContent } from "@/lib/usePortfolioContent";
+
+const DEFAULT = {
+  name: "Mohammad Amirul Kurniawan Putranto",
+  tagline:
+    "Backend-focused developer specializing in Laravel & CodeIgniter. Building production systems with AI-driven features, workflow automation, and thoughtful UI/UX.",
+  location: "Yogyakarta, Indonesia",
+  email: "amrlkurniawn19@gmail.com",
+  linkedin: "https://linkedin.com/in/mohammad-amirul-kurniawan-putranto/",
+};
 
 /** @param {{ onChatOpen: () => void }} props */
 export default function Hero({ onChatOpen }) {
   const containerRef = useRef(null);
+  const { data } = usePortfolioContent("hero", DEFAULT);
 
   // Staggered section reveal on mount
   useEffect(() => {
@@ -53,11 +65,11 @@ export default function Hero({ onChatOpen }) {
           className="font-display text-4xl sm:text-6xl lg:text-7xl font-medium text-text-primary leading-[1.05] tracking-tight"
           style={{ opacity: 0, transform: "translateY(16px)", transition: "all 0.6s cubic-bezier(0.16,1,0.3,1)" }}
         >
-          Mohammad
+          {data.name.split(" ")[0]}
           <br />
-          <span className="text-accent">Amirul</span>
+          <span className="text-accent">{data.name.split(" ")[1]}</span>
           <br />
-          Kurniawan
+          {data.name.split(" ").slice(2).join(" ")}
         </h1>
 
         <p
@@ -65,9 +77,7 @@ export default function Hero({ onChatOpen }) {
           className="mt-6 text-text-muted text-base sm:text-lg max-w-md leading-relaxed"
           style={{ opacity: 0, transform: "translateY(16px)", transition: "all 0.6s cubic-bezier(0.16,1,0.3,1)" }}
         >
-          Backend-focused developer specializing in Laravel &amp; CodeIgniter.
-          Building production systems with AI-driven features, workflow automation,
-          and thoughtful UI/UX.
+          {data.tagline}
         </p>
 
         <div
@@ -83,7 +93,7 @@ export default function Hero({ onChatOpen }) {
             Chat with Kaia →
           </button>
           <a
-            href="mailto:amrlkurniawn19@gmail.com"
+            href={`mailto:${data.email}`}
             className="px-6 py-3 border border-border text-text-muted text-sm rounded-lg hover:border-accent/40 hover:text-text-primary transition-all duration-200"
           >
             Get in touch
@@ -96,10 +106,10 @@ export default function Hero({ onChatOpen }) {
           style={{ opacity: 0, transform: "translateY(16px)", transition: "all 0.6s cubic-bezier(0.16,1,0.3,1)" }}
         >
           <span className="flex items-center gap-1.5">
-            <span>📍</span> Yogyakarta, Indonesia
+            <span>📍</span> {data.location}
           </span>
           <a
-            href="https://linkedin.com/in/mohammad-amirul-kurniawan-putranto/"
+            href={data.linkedin}
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-accent transition-colors"
@@ -107,7 +117,7 @@ export default function Hero({ onChatOpen }) {
             LinkedIn ↗
           </a>
           <a
-            href="mailto:amrlkurniawn19@gmail.com"
+            href={`mailto:${data.email}`}
             className="hover:text-accent transition-colors"
           >
             Email

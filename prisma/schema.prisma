@@ -41,3 +41,11 @@ model Message {
   content        String
   timestamp      DateTime     @default(now())
 }
+
+model PortfolioContent {
+  id        String   @id @default(cuid())
+  /// "hero" | "experience" | "projects" | "skills" | "education"
+  section   String   @unique
+  data      Json
+  updatedAt DateTime @updatedAt
+}

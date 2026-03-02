@@ -18,6 +18,7 @@ import { clsx } from "clsx";
 import ConversationList from "@/components/dashboard/ConversationList";
 import ConversationDetail from "@/components/dashboard/ConversationDetail";
 import OwnerReply from "@/components/dashboard/OwnerReply";
+import ContentEditor from "@/components/dashboard/ContentEditor";
 import { getSocket } from "@/lib/socket";
 
 const POLL_INTERVAL = 30_000; // 30 seconds
@@ -33,6 +34,7 @@ export default function DashboardPage() {
   const [lastFetch, setLastFetch] = useState(null);
   const [newCount, setNewCount] = useState(0);
   const [mobileView, setMobileView] = useState("list"); // "list" | "detail"
+  const [activeTab, setActiveTab] = useState("conversations"); // "conversations" | "content"
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -237,6 +239,32 @@ export default function DashboardPage() {
             </span>
           )}
         </div>
+
+        {/* Tab switcher */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setActiveTab("conversations")}
+            className={clsx(
+              "font-mono text-xs px-3 py-1 rounded-lg transition-colors",
+              activeTab === "conversations"
+                ? "bg-accent/10 text-accent border border-accent/30"
+                : "text-text-muted hover:text-text-primary border border-transparent"
+            )}
+          >
+            Chats
+          </button>
+          <button
+            onClick={() => setActiveTab("content")}
+            className={clsx(
+              "font-mono text-xs px-3 py-1 rounded-lg transition-colors",
+              activeTab === "content"
+                ? "bg-accent/10 text-accent border border-accent/30"
+                : "text-text-muted hover:text-text-primary border border-transparent"
+            )}
+          >
+            Content
+          </button>
+        </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           {lastFetch && (
             <span className="font-mono text-[10px] text-text-muted hidden sm:inline">
@@ -252,7 +280,12 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Main layout — side by side on desktop, stacked on mobile */}
+      {/* Main layout */}
+      {activeTab === "content" ? (
+        <div className="flex-1 overflow-hidden">
+          <ContentEditor />
+        </div>
+      ) : (
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar — always visible on desktop; visible on mobile only in list view */}
         <aside
@@ -309,6 +342,7 @@ export default function DashboardPage() {
           )}
         </main>
       </div>
+      )}
     </div>
   );
 }
