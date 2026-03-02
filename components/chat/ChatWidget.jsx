@@ -12,6 +12,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { clsx } from "clsx";
 import VisitorForm from "./VisitorForm";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
@@ -158,10 +159,12 @@ export default function ChatWidget() {
 
   return (
     <>
-      {/* Chat window */}
+      {/* Chat window — full-screen on mobile, floating on desktop */}
       {widgetState === "open" && (
         <div
-          className="fixed bottom-24 right-5 z-50 w-[360px] max-w-[calc(100vw-20px)] h-[520px] max-h-[calc(100vh-120px)] bg-surface border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slide-up"
+          className="fixed z-50 bg-surface border border-border shadow-2xl flex flex-col overflow-hidden animate-slide-up
+            inset-0 rounded-none
+            sm:inset-auto sm:bottom-24 sm:right-5 sm:w-[360px] sm:max-w-[calc(100vw-20px)] sm:h-[520px] sm:max-h-[calc(100vh-120px)] sm:rounded-2xl"
           style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(201,169,110,0.08)" }}
         >
           {/* Header */}
@@ -205,8 +208,11 @@ export default function ChatWidget() {
         </div>
       )}
 
-      {/* Floating bubble */}
-      <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2">
+      {/* Floating bubble — hidden on mobile when chat is open */}
+      <div className={clsx(
+        "fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2",
+        widgetState === "open" ? "hidden sm:flex" : "flex"
+      )}>
         {/* Tooltip — shown when bubble is visible but window is closed */}
         {widgetState === "bubble" && (
           <div className="animate-fade-in bg-surface border border-border rounded-xl px-3 py-2 shadow-lg">

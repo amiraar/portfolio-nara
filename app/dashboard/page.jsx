@@ -14,6 +14,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { clsx } from "clsx";
 import ConversationList from "@/components/dashboard/ConversationList";
 import ConversationDetail from "@/components/dashboard/ConversationDetail";
 import OwnerReply from "@/components/dashboard/OwnerReply";
@@ -31,6 +32,7 @@ export default function DashboardPage() {
   const [isTakingOver, setIsTakingOver] = useState(false);
   const [lastFetch, setLastFetch] = useState(null);
   const [newCount, setNewCount] = useState(0);
+  const [mobileView, setMobileView] = useState("list"); // "list" | "detail"
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -179,6 +181,12 @@ export default function DashboardPage() {
   function handleSelect(conv) {
     setSelectedId(conv.id);
     setNewCount(0);
+    setMobileView("detail"); // switch to detail on mobile
+  }
+
+  function handleBackToList() {
+    setMobileView("list");
+    setSelectedId(null);
   }
 
   function handleReplySent(message) {
@@ -203,18 +211,33 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top bar */}
-      <header className="flex-shrink-0 h-12 bg-surface border-b border-border flex items-center justify-between px-5">
-        <div className="flex items-center gap-3">
-          <span className="font-display text-sm font-medium text-text-primary">
-            Nara <span className="text-accent">Dashboard</span>
+      <header className="flex-shrink-0 h-12 bg-surface border-b border-border flex items-center justify-between px-4 sm:px-5">
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Back button — mobile only, shown in detail view */}
+          {mobileView === "detail" && selectedId && (
+            <button
+              onClick={handleBackToList}
+              className="sm:hidden mr-1 text-text-muted hover:text-text-primary transition-colors flex-shrink-0"
+              aria-label="Back to list"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M11 4L6 9l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
+          <span className="font-display text-sm font-medium text-text-primary truncate">
+            {mobileView === "detail" && selectedId
+              ? conversations.find((c) => c.id === selectedId)?.visitor?.name ?? "Conversation"
+              : <><span className="text-text-primary">Nara</span> <span className="text-accent">Dashboard</span></>
+            }
           </span>
           {newCount > 0 && (
-            <span className="font-mono text-[10px] bg-accent text-background px-1.5 py-0.5 rounded-full">
+            <span className="font-mono text-[10px] bg-accent text-background px-1.5 py-0.5 rounded-full flex-shrink-0">
               {newCount} new
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-shrink-0">
           {lastFetch && (
             <span className="font-mono text-[10px] text-text-muted hidden sm:inline">
               Updated {lastFetch.toLocaleTimeString()}
@@ -229,10 +252,16 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Main layout */}
+      {/* Main layout — side by side on desktop, stacked on mobile */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <aside className="w-72 flex-shrink-0 border-r border-border bg-surface/40 flex flex-col overflow-hidden">
+        {/* Sidebar — always visible on desktop; visible on mobile only in list view */}
+        <aside
+          className={clsx(
+            "border-r border-border bg-surface/40 flex flex-col overflow-hidden",
+            "w-full sm:w-72 sm:flex-shrink-0",
+            mobileView === "detail" ? "hidden sm:flex" : "flex"
+          )}
+        >
           <div className="px-4 py-3 border-b border-border flex-shrink-0">
             <p className="font-mono text-xs text-text-muted">
               {conversations.length} conversation{conversations.length !== 1 ? "s" : ""}
@@ -245,8 +274,13 @@ export default function DashboardPage() {
           />
         </aside>
 
-        {/* Detail panel */}
-        <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Detail panel — always visible on desktop; visible on mobile only in detail view */}
+        <main
+          className={clsx(
+            "flex-1 flex flex-col overflow-hidden",
+            mobileView === "list" ? "hidden sm:flex" : "flex"
+          )}
+        >
           {selectedConversation ? (
             <>
               <div className="flex-1 overflow-hidden flex flex-col">

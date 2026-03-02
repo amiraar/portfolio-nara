@@ -50,7 +50,7 @@ export default function Hero({ onChatOpen }) {
 
         <h1
           data-reveal
-          className="font-display text-5xl sm:text-6xl lg:text-7xl font-medium text-text-primary leading-[1.05] tracking-tight"
+          className="font-display text-4xl sm:text-6xl lg:text-7xl font-medium text-text-primary leading-[1.05] tracking-tight"
           style={{ opacity: 0, transform: "translateY(16px)", transition: "all 0.6s cubic-bezier(0.16,1,0.3,1)" }}
         >
           Mohammad
@@ -92,13 +92,12 @@ export default function Hero({ onChatOpen }) {
 
         <div
           data-reveal
-          className="mt-12 flex items-center gap-5 text-xs text-text-muted"
+          className="mt-12 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-text-muted"
           style={{ opacity: 0, transform: "translateY(16px)", transition: "all 0.6s cubic-bezier(0.16,1,0.3,1)" }}
         >
           <span className="flex items-center gap-1.5">
             <span>📍</span> Yogyakarta, Indonesia
           </span>
-          <span className="w-px h-3 bg-border" />
           <a
             href="https://linkedin.com/in/mohammad-amirul-kurniawan-putranto/"
             target="_blank"
@@ -107,7 +106,6 @@ export default function Hero({ onChatOpen }) {
           >
             LinkedIn ↗
           </a>
-          <span className="w-px h-3 bg-border" />
           <a
             href="mailto:amrlkurniawn19@gmail.com"
             className="hover:text-accent transition-colors"

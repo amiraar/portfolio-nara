@@ -48,20 +48,20 @@ export default function ConversationDetail({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex-shrink-0 px-5 py-4 border-b border-border bg-surface/80">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <h2 className="font-display text-base font-medium text-text-primary">
+      <div className="flex-shrink-0 px-4 sm:px-5 py-3 sm:py-4 border-b border-border bg-surface/80">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-3">
+          <div className="min-w-0">
+            <h2 className="font-display text-base font-medium text-text-primary truncate">
               {conversation.visitor?.name}
             </h2>
-            <p className="text-xs text-text-muted mt-0.5">{conversation.visitor?.email}</p>
+            <p className="text-xs text-text-muted mt-0.5 truncate">{conversation.visitor?.email}</p>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Mode badge */}
             <span
               className={clsx(
-                "font-mono text-[10px] px-2 py-1 rounded border",
+                "font-mono text-[10px] px-2 py-1 rounded border whitespace-nowrap",
                 isHuman
                   ? "text-orange-400 border-orange-400/30 bg-orange-400/5"
                   : "text-accent border-accent/30 bg-accent/5"
