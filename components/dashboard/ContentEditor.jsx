@@ -368,6 +368,95 @@ function HeroEditor({ data, onChange }) {
   );
 }
 
+// ─── Period date-picker helpers ──────────────────────────────────────────
+
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function monthYearToInput(str) {
+  // "Aug 2025" → "2025-08"
+  if (!str || str === "Present") return "";
+  const [mon, yr] = str.trim().split(" ");
+  const idx = MONTH_NAMES.indexOf(mon);
+  if (idx === -1 || !yr) return "";
+  return `${yr}-${String(idx + 1).padStart(2, "0")}`;
+}
+
+function inputToMonthYear(val) {
+  // "2025-08" → "Aug 2025"
+  if (!val) return "";
+  const [yr, mo] = val.split("-");
+  return `${MONTH_NAMES[parseInt(mo, 10) - 1]} ${yr}`;
+}
+
+function parsePeriod(period) {
+  if (!period) return { start: "", end: "" };
+  const parts = period.split("–").map((s) => s.trim());
+  return {
+    start: monthYearToInput(parts[0]),
+    end: parts[1] === "Present" ? "" : monthYearToInput(parts[1]),
+  };
+}
+
+function buildPeriod(start, end, isCurrent) {
+  const startStr = inputToMonthYear(start);
+  if (!startStr) return "";
+  const endStr = isCurrent ? "Present" : inputToMonthYear(end);
+  return endStr ? `${startStr} – ${endStr}` : startStr;
+}
+
+function PeriodInput({ value, onChange, current, onCurrentChange }) {
+  const { start, end } = parsePeriod(value);
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="font-mono text-[10px] text-text-muted uppercase tracking-wider">Start</label>
+          <input
+            type="month"
+            value={start}
+            onChange={(e) => onChange(buildPeriod(e.target.value, end, current))}
+            className={inputCls + " [color-scheme:dark]"}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="font-mono text-[10px] text-text-muted uppercase tracking-wider">End</label>
+          <input
+            type="month"
+            value={end}
+            disabled={current}
+            onChange={(e) => onChange(buildPeriod(start, e.target.value, current))}
+            className={inputCls + " [color-scheme:dark] disabled:opacity-40 disabled:cursor-not-allowed"}
+          />
+        </div>
+      </div>
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={!!current}
+          onChange={(e) => {
+            onCurrentChange(e.target.checked);
+            onChange(buildPeriod(start, end, e.target.checked));
+          }}
+          className="accent-[#C9A96E] w-4 h-4"
+        />
+        <span className="text-sm text-text-muted">Pekerjaan saat ini (Current)</span>
+      </label>
+    </div>
+  );
+}
+
+// ─── Language level dropdown ──────────────────────────────────────────────
+
+const LANGUAGE_LEVELS = [
+  { label: "Native",             pct: 100 },
+  { label: "Fluent",             pct: 90  },
+  { label: "Advanced",           pct: 80  },
+  { label: "Upper-Intermediate", pct: 70  },
+  { label: "Intermediate",       pct: 60  },
+  { label: "Elementary",         pct: 40  },
+  { label: "Beginner",           pct: 20  },
+];
+
 // ─── Experience Editor ────────────────────────────────────────────────────
 
 const EMPTY_EXP = { company: "", role: "", period: "", description: "", tags: [], current: false };
@@ -414,7 +503,12 @@ function ExperienceEditor({ data, onChange }) {
                 </Field>
               </div>
               <Field label="Period">
-                <input className={inputCls} value={exp.period} onChange={(e) => updateItem(i, { ...exp, period: e.target.value })} placeholder="Aug 2025 – Present" />
+                <PeriodInput
+                  value={exp.period}
+                  onChange={(period) => updateItem(i, { ...exp, period })}
+                  current={!!exp.current}
+                  onCurrentChange={(current) => updateItem(i, { ...exp, current })}
+                />
               </Field>
               <Field label="Description">
                 <textarea className={textareaCls} rows={4} value={exp.description} onChange={(e) => updateItem(i, { ...exp, description: e.target.value })} placeholder="Deskripsi pekerjaan..." />
@@ -422,10 +516,6 @@ function ExperienceEditor({ data, onChange }) {
               <Field label="Tags / Tech Stack">
                 <TagInput tags={exp.tags ?? []} onChange={(tags) => updateItem(i, { ...exp, tags })} />
               </Field>
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input type="checkbox" checked={!!exp.current} onChange={(e) => updateItem(i, { ...exp, current: e.target.checked })} className="accent-[#C9A96E] w-4 h-4" />
-                <span className="text-sm text-text-muted">Pekerjaan saat ini (Current)</span>
-              </label>
             </div>
           )}
         </div>
@@ -527,6 +617,13 @@ function SkillsEditor({ data, onChange }) {
   function setSkills(s) { onChange({ ...data, skills: s }); }
   function setLanguages(l) { onChange({ ...data, languages: l }); }
   function setStats(s) { onChange({ ...data, stats: s }); }
+  function moveStat(i, dir) {
+    const j = i + dir;
+    if (j < 0 || j >= stats.length) return;
+    const next = [...stats];
+    [next[i], next[j]] = [next[j], next[i]];
+    setStats(next);
+  }
 
   function addCategory() {
     const k = newCat.trim();
@@ -586,23 +683,46 @@ function SkillsEditor({ data, onChange }) {
                   }} placeholder="English" />
                 </Field>
                 <Field label="Level">
-                  <input className={inputCls} value={lang.level} onChange={(e) => {
-                    const next = [...languages]; next[i] = { ...lang, level: e.target.value }; setLanguages(next);
-                  }} placeholder="Native / Intermediate" />
+                  <select
+                    className={inputCls + " cursor-pointer"}
+                    value={lang.level}
+                    onChange={(e) => {
+                      const found = LANGUAGE_LEVELS.find((l) => l.label === e.target.value);
+                      const next = [...languages];
+                      next[i] = { ...lang, level: e.target.value, pct: found?.pct ?? 50 };
+                      setLanguages(next);
+                    }}
+                  >
+                    <option value="" disabled>Pilih level...</option>
+                    {LANGUAGE_LEVELS.map((lvl) => (
+                      <option key={lvl.label} value={lvl.label}>{lvl.label}</option>
+                    ))}
+                  </select>
                 </Field>
               </div>
-              <Field label={`Proficiency: ${lang.pct}%`}>
-                <input type="range" min={0} max={100} value={lang.pct}
-                  onChange={(e) => { const next = [...languages]; next[i] = { ...lang, pct: Number(e.target.value) }; setLanguages(next); }}
-                  className="w-full accent-[#C9A96E]" />
-              </Field>
+              {lang.level && (
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="font-mono text-[10px] text-text-muted">Preview proficiency</span>
+                    <span className="font-mono text-[10px] text-accent">
+                      {LANGUAGE_LEVELS.find((l) => l.label === lang.level)?.pct ?? lang.pct}%
+                    </span>
+                  </div>
+                  <div className="h-1 rounded-full bg-border overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-accent/80 to-accent transition-all duration-500"
+                      style={{ width: `${LANGUAGE_LEVELS.find((l) => l.label === lang.level)?.pct ?? lang.pct}%` }}
+                    />
+                  </div>
+                </div>
+              )}
               <div className="flex justify-end">
                 <BtnDanger onClick={() => setLanguages(languages.filter((_, idx) => idx !== i))}>Hapus</BtnDanger>
               </div>
             </div>
           ))}
         </div>
-        <button type="button" onClick={() => setLanguages([...languages, { name: "", level: "", pct: 50 }])}
+        <button type="button" onClick={() => setLanguages([...languages, { name: "", level: "Intermediate", pct: 60 }])}
           className="mt-3 w-full font-mono text-xs text-accent border border-accent/30 border-dashed py-3 rounded-xl hover:bg-accent/5 transition-colors">
           + Tambah Bahasa
         </button>
@@ -612,24 +732,95 @@ function SkillsEditor({ data, onChange }) {
 
       {/* Quick Stats */}
       <div>
-        <p className="font-mono text-xs text-accent mb-3 uppercase tracking-wider">Quick Stats</p>
-        <div className="space-y-2">
+        {/* Header + konteks */}
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="font-mono text-xs text-accent uppercase tracking-wider">Quick Stats</p>
+              <span className="font-mono text-[9px] text-text-muted border border-border px-1.5 py-0.5 rounded-full bg-surface/60">
+                Tampil di: Skills → Sidebar
+              </span>
+            </div>
+            <p className="font-mono text-[10px] text-text-muted mt-1">
+              Statistik singkat di sidebar section Skills portfolio (contoh: Projects shipped, GPA, dll)
+            </p>
+          </div>
+        </div>
+
+        {/* Preset chips */}
+        <div className="flex flex-wrap gap-1.5 mb-4 mt-3">
+          {["Projects shipped", "Students mentored", "Years experience", "GPA", "Certifications"].map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              disabled={stats.some((s) => s.label === preset)}
+              onClick={() => setStats([...stats, { label: preset, value: "" }])}
+              className="font-mono text-[10px] px-2.5 py-1 rounded-full border border-accent/25 text-accent/70 bg-accent/5 hover:bg-accent/15 hover:border-accent/50 hover:text-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-accent/5 disabled:hover:border-accent/25 disabled:hover:text-accent/70"
+            >
+              + {preset}
+            </button>
+          ))}
+        </div>
+
+        {/* Stat cards */}
+        <div className="space-y-3">
           {stats.map((stat, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <input className={`${inputCls} flex-1`} value={stat.label}
-                onChange={(e) => { const next = [...stats]; next[i] = { ...stat, label: e.target.value }; setStats(next); }}
-                placeholder="Label (cth: Projects shipped)" />
-              <input className={`${inputCls} w-24`} value={stat.value}
-                onChange={(e) => { const next = [...stats]; next[i] = { ...stat, value: e.target.value }; setStats(next); }}
-                placeholder="7+" />
-              <BtnDanger onClick={() => setStats(stats.filter((_, idx) => idx !== i))}>×</BtnDanger>
+            <div key={i} className="border border-border rounded-xl p-4 space-y-3 bg-surface/20">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] text-text-muted border border-border px-2 py-0.5 rounded-md bg-background">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div className="flex items-center gap-1">
+                  <BtnSecondary onClick={() => moveStat(i, -1)} disabled={i === 0}>↑</BtnSecondary>
+                  <BtnSecondary onClick={() => moveStat(i, 1)} disabled={i === stats.length - 1}>↓</BtnSecondary>
+                  <BtnDanger onClick={() => setStats(stats.filter((_, idx) => idx !== i))}>Hapus</BtnDanger>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Field label="Label">
+                  <input
+                    className={`${inputCls} sm:col-span-2`}
+                    value={stat.label}
+                    onChange={(e) => { const next = [...stats]; next[i] = { ...stat, label: e.target.value }; setStats(next); }}
+                    placeholder="cth: Projects shipped"
+                  />
+                </Field>
+                <Field label="Nilai">
+                  <div className="flex flex-col gap-1">
+                    <input
+                      className={inputCls}
+                      value={stat.value}
+                      onChange={(e) => { const next = [...stats]; next[i] = { ...stat, value: e.target.value }; setStats(next); }}
+                      placeholder="cth: 7+"
+                    />
+                    <span className="font-mono text-[9px] text-text-muted">Angka, teks, simbol (+, %, dsb)</span>
+                  </div>
+                </Field>
+              </div>
             </div>
           ))}
         </div>
+
         <button type="button" onClick={() => setStats([...stats, { label: "", value: "" }])}
           className="mt-3 w-full font-mono text-xs text-accent border border-accent/30 border-dashed py-3 rounded-xl hover:bg-accent/5 transition-colors">
           + Tambah Stat
         </button>
+
+        {/* Live preview */}
+        {stats.length > 0 && (
+          <div className="mt-5">
+            <p className="font-mono text-[10px] text-text-muted uppercase tracking-wider mb-2">Preview tampilan di portfolio</p>
+            <div className="p-4 rounded-xl border border-border bg-surface/60 space-y-2">
+              <p className="font-mono text-xs text-accent mb-3">Quick Stats</p>
+              {stats.map((s, i) => (
+                <div key={i} className="flex justify-between items-center">
+                  <span className="text-xs text-text-muted">{s.label || <span className="italic opacity-40">Label kosong</span>}</span>
+                  <span className="font-mono text-sm text-accent">{s.value || <span className="italic opacity-40 text-xs">—</span>}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
