@@ -25,9 +25,35 @@ export default function MessageList({ messages, isTyping }) {
   return (
     <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 min-h-0">
       {messages.length === 0 && (
-        <p className="text-xs text-text-muted text-center mt-4">
-          Percakapan belum dimulai. Kirim pesan pertamamu!
-        </p>
+        <div className="flex flex-col items-center justify-center gap-3 flex-1 py-8">
+          <div className="w-12 h-12 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M17 3H3a1 1 0 00-1 1v10a1 1 0 001 1h3l3 3 3-3h5a1 1 0 001-1V4a1 1 0 00-1-1z" stroke="#C9A96E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.7"/>
+              <path d="M6 8h8M6 11.5h5" stroke="#C9A96E" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.7"/>
+            </svg>
+          </div>
+          <div className="text-center">
+            <p className="text-sm text-text-primary font-medium">Halo! Saya Kaia 👋</p>
+            <p className="text-xs text-text-muted mt-1 leading-relaxed max-w-[200px]">
+              Ada yang ingin kamu tanyakan tentang Amirul?
+            </p>
+          </div>
+          {/* Suggested starters */}
+          <div className="flex flex-col gap-1.5 w-full px-1 mt-1">
+            {["Apa tech stack utama Amirul?", "Apakah Amirul open to work?", "Ceritakan pengalaman kerja Amirul"].map((q) => (
+              <button
+                key={q}
+                onClick={() => {
+                  const ev = new CustomEvent("kaia_suggested_message", { detail: q });
+                  window.dispatchEvent(ev);
+                }}
+                className="text-left text-xs text-text-muted border border-border hover:border-accent/40 hover:text-accent rounded-lg px-3 py-2 transition-colors bg-background/50 hover:bg-accent/5"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       {messages.map((msg) => (

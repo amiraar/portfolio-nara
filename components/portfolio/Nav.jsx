@@ -13,18 +13,22 @@ const SECTIONS = [
   { id: "experience", label: "Experience" },
   { id: "projects", label: "Projects" },
   { id: "skills", label: "Skills" },
-  { id: "education", label: "Contact" },
+  { id: "education", label: "Education" },
 ];
 
 export default function Nav() {
   const [active, setActive] = useState("");
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrollPct, setScrollPct] = useState(0);
 
-  // Track scroll position for nav background
+  // Track scroll position for nav background + progress bar
   useEffect(() => {
     function onScroll() {
       setScrolled(window.scrollY > 60);
+      const el = document.documentElement;
+      const pct = (el.scrollTop / (el.scrollHeight - el.clientHeight)) * 100;
+      setScrollPct(Math.min(pct, 100));
     }
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -63,6 +67,11 @@ export default function Nav() {
           : "bg-transparent"
       )}
     >
+      {/* Scroll progress bar */}
+      <div
+        className="absolute bottom-0 left-0 h-[2px] bg-accent/60 transition-all duration-100 pointer-events-none"
+        style={{ width: `${scrollPct}%` }}
+      />
       <div className="max-w-5xl mx-auto px-6 lg:px-8 h-14 flex items-center justify-between">
         {/* Logo */}
         <button

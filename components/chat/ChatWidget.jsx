@@ -28,6 +28,8 @@ export default function ChatWidget() {
   const [isTyping, setIsTyping] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Show bubble after 3 seconds
   useEffect(() => {
@@ -43,6 +45,16 @@ export default function ChatWidget() {
     window.addEventListener("open_chat_widget", onOpenRequest);
     return () => window.removeEventListener("open_chat_widget", onOpenRequest);
   }, []);
+
+  // Handle suggested message click from empty state
+  useEffect(() => {
+    function onSuggested(e) {
+      if (e.detail) handleSend(e.detail);
+    }
+    window.addEventListener("kaia_suggested_message", onSuggested);
+    return () => window.removeEventListener("kaia_suggested_message", onSuggested);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversation?.id, sending]);
 
   // Check localStorage for existing session on mount
   useEffect(() => {
@@ -82,6 +94,11 @@ export default function ChatWidget() {
         return [...prev, message];
       });
       setIsTyping(false);
+      // Increment unread badge only when widget is closed
+      setWidgetState((ws) => {
+        if (ws !== "open") setUnreadCount((c) => c + 1);
+        return ws;
+      });
     }
 
     function onKaiaTyping() {
@@ -158,10 +175,22 @@ export default function ChatWidget() {
 
   function openWidget() {
     setWidgetState("open");
+    setUnreadCount(0);
   }
 
   function closeWidget() {
     setWidgetState("bubble");
+    setShowResetConfirm(false);
+  }
+
+  function handleReset() {
+    localStorage.removeItem("nara_visitor");
+    setVisitor(null);
+    setConversation(null);
+    setMessages([]);
+    setHasSession(false);
+    setUnreadCount(0);
+    setShowResetConfirm(false);
   }
 
   // --- Bubble ---
@@ -179,8 +208,10 @@ export default function ChatWidget() {
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border bg-surface/80 backdrop-blur-sm flex-shrink-0">
-            <div className="w-8 h-8 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center">
+            <div className="relative w-8 h-8 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center">
               <span className="font-mono text-accent text-xs font-medium">K</span>
+              {/* Online dot */}
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-surface" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-display text-sm font-medium text-text-primary leading-none">
@@ -190,6 +221,37 @@ export default function ChatWidget() {
                 Amirul&apos;s assistant · Usually replies instantly
               </p>
             </div>
+            {/* Reset conversation */}
+            {hasSession && (
+              <div className="relative">
+                {showResetConfirm ? (
+                  <div className="absolute right-0 top-8 z-10 bg-surface border border-border rounded-xl shadow-xl p-3 w-44">
+                    <p className="text-[11px] text-text-muted mb-2 leading-snug">Mulai percakapan baru? Riwayat akan dihapus.</p>
+                    <div className="flex gap-2">
+                      <button onClick={handleReset}
+                        className="flex-1 text-[11px] font-mono bg-red-500/15 text-red-400 border border-red-400/20 rounded-lg py-1 hover:bg-red-500/25 transition-colors">
+                        Reset
+                      </button>
+                      <button onClick={() => setShowResetConfirm(false)}
+                        className="flex-1 text-[11px] font-mono border border-border text-text-muted rounded-lg py-1 hover:border-accent/30 transition-colors">
+                        Batal
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                <button
+                  onClick={() => setShowResetConfirm((v) => !v)}
+                  className="w-7 h-7 rounded-lg hover:bg-border flex items-center justify-center transition-colors"
+                  aria-label="Mulai percakapan baru"
+                  title="Mulai percakapan baru"
+                >
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                    <path d="M11.5 2A6 6 0 101 6.5" stroke="#6B6B6B" strokeWidth="1.4" strokeLinecap="round"/>
+                    <path d="M1 3.5V6.5H4" stroke="#6B6B6B" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            )}
             <button
               onClick={closeWidget}
               className="w-7 h-7 rounded-lg hover:bg-border flex items-center justify-center transition-colors flex-shrink-0"
@@ -248,10 +310,16 @@ export default function ChatWidget() {
 
         <button
           onClick={widgetState === "open" ? closeWidget : openWidget}
-          className="w-14 h-14 rounded-full bg-accent hover:bg-accent-hover transition-all duration-300 shadow-lg flex items-center justify-center group animate-fade-in"
+          className="relative w-14 h-14 rounded-full bg-accent hover:bg-accent-hover transition-all duration-300 shadow-lg flex items-center justify-center group animate-fade-in"
           style={{ boxShadow: "0 4px 24px rgba(201,169,110,0.35)" }}
           aria-label={widgetState === "open" ? "Close chat" : "Open chat"}
         >
+          {/* Unread badge */}
+          {unreadCount > 0 && widgetState !== "open" && (
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-mono font-bold flex items-center justify-center leading-none shadow-md">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
           {widgetState === "open" ? (
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
               <path
