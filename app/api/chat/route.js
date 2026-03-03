@@ -24,12 +24,19 @@ const AI_FALLBACK_MESSAGE =
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { conversationId, content } = body;
+    const { conversationId, content, visitorId } = body;
 
     if (!conversationId || !content?.trim()) {
       return NextResponse.json(
         { error: "conversationId and content are required" },
         { status: 400 }
+      );
+    }
+
+    if (!visitorId) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
       );
     }
 
@@ -82,6 +89,11 @@ export async function POST(req) {
 
     if (!conversation) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+    }
+
+    // --- Ownership check: visitorId must match the conversation owner ---
+    if (conversation.visitorId !== visitorId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Save the visitor's message

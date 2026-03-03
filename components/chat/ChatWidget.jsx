@@ -142,7 +142,7 @@ export default function ChatWidget() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ conversationId: conversation.id, content }),
+          body: JSON.stringify({ conversationId: conversation.id, content, visitorId: visitor?.id }),
         });
         const data = await res.json();
 

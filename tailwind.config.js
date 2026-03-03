@@ -4,16 +4,17 @@ module.exports = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        background: "#0A0A0A",
-        surface: "#111111",
-        accent: "#C9A96E",
-        "accent-hover": "#D4B97E",
-        "text-primary": "#F5F5F0",
-        "text-muted": "#6B6B6B",
-        border: "#1E1E1E",
+        background: "rgb(var(--color-bg) / <alpha-value>)",
+        surface: "rgb(var(--color-surface) / <alpha-value>)",
+        accent: "rgb(var(--color-accent) / <alpha-value>)",
+        "accent-hover": "rgb(var(--color-accent-hover) / <alpha-value>)",
+        "text-primary": "rgb(var(--color-text) / <alpha-value>)",
+        "text-muted": "rgb(var(--color-muted) / <alpha-value>)",
+        border: "rgb(var(--color-border) / <alpha-value>)",
       },
       fontFamily: {
         display: ["Playfair Display", "Georgia", "serif"],
