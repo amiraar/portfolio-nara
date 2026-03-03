@@ -2,10 +2,6 @@
 
 Personal portfolio website for **Mohammad Amirul Kurniawan Putranto** with an integrated AI chat assistant named **Kaia**. Built with Next.js 14, Socket.io realtime, OpenAI, and a private owner dashboard.
 
----
-
----
-
 ## 🚀 Getting Started
 
 ### Prerequisites
