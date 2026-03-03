@@ -20,9 +20,13 @@ app.prepare().then(() => {
   });
 
   /** @type {import('socket.io').Server} */
+  // CORS: never fall back to "*" — use localhost for dev if env var is not set
+  const allowedOrigin =
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.NEXT_PUBLIC_SITE_URL || "*",
+      origin: allowedOrigin,
       methods: ["GET", "POST"],
     },
   });

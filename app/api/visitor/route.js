@@ -5,9 +5,37 @@
 
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rateLimit";
+
+const MAX_NAME_LENGTH = 100;
+const MAX_EMAIL_LENGTH = 200;
+
+/**
+ * Strip characters that could enable XSS if rendered without escaping.
+ * React escapes by default, but this is a defence-in-depth measure.
+ * @param {string} str
+ * @returns {string}
+ */
+function sanitizeText(str) {
+  return str.replace(/[<>"'`]/g, "");
+}
 
 export async function POST(req) {
   try {
+    // --- Rate limiting: 5 registrations per minute per IP ---
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+    const { allowed, retryAfter } = checkRateLimit(`visitor:${ip}`, 5, 60);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Terlalu banyak permintaan. Coba lagi dalam ${retryAfter} detik.` },
+        {
+          status: 429,
+          headers: { "Retry-After": String(retryAfter) },
+        }
+      );
+    }
+
     const body = await req.json();
     const { name, email } = body;
 
@@ -15,17 +43,35 @@ export async function POST(req) {
       return NextResponse.json({ error: "name and email are required" }, { status: 400 });
     }
 
+    // --- Input length validation ---
+    if (name.trim().length > MAX_NAME_LENGTH) {
+      return NextResponse.json(
+        { error: `Name too long. Maximum ${MAX_NAME_LENGTH} characters.` },
+        { status: 400 }
+      );
+    }
+    if (email.trim().length > MAX_EMAIL_LENGTH) {
+      return NextResponse.json(
+        { error: `Email too long. Maximum ${MAX_EMAIL_LENGTH} characters.` },
+        { status: 400 }
+      );
+    }
+
+    // --- XSS sanitization ---
+    const safeName = sanitizeText(name.trim());
+    const safeEmail = sanitizeText(email.trim().toLowerCase());
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(safeEmail)) {
       return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
     }
 
     // Upsert visitor (create if new, return existing if not)
     const visitor = await prisma.visitor.upsert({
-      where: { email },
+      where: { email: safeEmail },
       update: {}, // Do not overwrite name on return visit
-      create: { name, email },
+      create: { name: safeName, email: safeEmail },
       include: {
         conversations: {
           where: { status: "active" },

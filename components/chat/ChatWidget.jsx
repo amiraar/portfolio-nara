@@ -27,6 +27,7 @@ export default function ChatWidget() {
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(null);
 
   // Show bubble after 3 seconds
   useEffect(() => {
@@ -108,6 +109,7 @@ export default function ChatWidget() {
   const handleSend = useCallback(
     async (content) => {
       if (!conversation?.id || sending) return;
+      setSendError(null);
       setSending(true);
 
       // Optimistic UI: add visitor message immediately
@@ -127,6 +129,13 @@ export default function ChatWidget() {
         });
         const data = await res.json();
 
+        if (!res.ok) {
+          // Remove optimistic message and show error
+          setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+          setSendError(data.error ?? "Gagal mengirim pesan. Coba lagi.");
+          return;
+        }
+
         if (data.message) {
           // Replace optimistic message with real one from DB
           setMessages((prev) =>
@@ -139,6 +148,7 @@ export default function ChatWidget() {
       } catch (err) {
         console.error("Send error:", err);
         setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+        setSendError("Gagal mengirim pesan. Periksa koneksi internet Anda.");
       } finally {
         setSending(false);
       }
@@ -200,6 +210,20 @@ export default function ChatWidget() {
           {hasSession && conversation ? (
             <>
               <MessageList messages={messages} isTyping={isTyping} />
+              {sendError && (
+                <div className="mx-3 mb-1 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start justify-between gap-2">
+                  <p className="text-[11px] text-red-400 leading-snug">{sendError}</p>
+                  <button
+                    onClick={() => setSendError(null)}
+                    className="flex-shrink-0 text-red-400/60 hover:text-red-400 transition-colors"
+                    aria-label="Dismiss error"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
               <MessageInput onSend={handleSend} disabled={sending} />
             </>
           ) : (

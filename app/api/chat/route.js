@@ -2,11 +2,24 @@
  * app/api/chat/route.js — Handle inbound visitor messages.
  * POST { conversationId, content } → saves message, calls OpenAI if mode="ai"
  * Emits Socket.io events for realtime delivery.
+ *
+ * Security:
+ *  - Rate limit: 10 messages per minute per conversationId (fallback to IP).
+ *  - Input validation: message must be 1–1000 characters.
+ *  - Graceful OpenAI fallback: returns a helpful message if the AI is down.
  */
 
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getKaiaReply } from "@/lib/openai";
+import { checkRateLimit } from "@/lib/rateLimit";
+
+/** Maximum allowed message length (characters). */
+const MAX_CONTENT_LENGTH = 1000;
+
+/** Fallback reply shown to visitors when OpenAI is unavailable. */
+const AI_FALLBACK_MESSAGE =
+  "Maaf, Kaia sedang tidak tersedia saat ini. Silakan hubungi Amirul langsung di amrlkurniawn19@gmail.com — ia akan segera membalas pesan Anda.";
 
 export async function POST(req) {
   try {
@@ -17,6 +30,44 @@ export async function POST(req) {
       return NextResponse.json(
         { error: "conversationId and content are required" },
         { status: 400 }
+      );
+    }
+
+    // --- XSS sanitization + input length validation ---
+    // Strip HTML-dangerous characters before storing or sending to OpenAI
+    const trimmed = content.trim().replace(/[<>"'`]/g, "");
+    if (trimmed.length === 0) {
+      return NextResponse.json({ error: "Message cannot be empty" }, { status: 400 });
+    }
+    if (trimmed.length > MAX_CONTENT_LENGTH) {
+      return NextResponse.json(
+        { error: `Message too long. Maximum ${MAX_CONTENT_LENGTH} characters allowed.` },
+        { status: 400 }
+      );
+    }
+
+    // --- Rate limiting ---
+    // Prefer conversationId as the rate-limit key (stable, visitor-specific).
+    // Fall back to forwarded IP if needed.
+    const rateLimitKey =
+      conversationId ||
+      req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+      "unknown";
+
+    const { allowed, remaining, retryAfter } = checkRateLimit(rateLimitKey);
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          error: `Terlalu banyak pesan. Coba lagi dalam ${retryAfter} detik.`,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(retryAfter),
+            "X-RateLimit-Limit": "10",
+            "X-RateLimit-Remaining": "0",
+          },
+        }
       );
     }
 
@@ -38,7 +89,7 @@ export async function POST(req) {
       data: {
         conversationId,
         role: "user",
-        content: content.trim(),
+        content: trimmed,
       },
     });
 
@@ -74,10 +125,10 @@ export async function POST(req) {
 
     let replyText;
     try {
-      replyText = await getKaiaReply(history, content.trim());
+      replyText = await getKaiaReply(history, trimmed);
     } catch (aiError) {
       console.error("[OpenAI error]", aiError);
-      replyText = "Maaf, Kaia sedang tidak tersedia. Coba lagi nanti.";
+      replyText = AI_FALLBACK_MESSAGE;
     }
 
     // Save Kaia's reply

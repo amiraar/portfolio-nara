@@ -1,11 +1,15 @@
 /**
  * components/chat/MessageInput.jsx — Text input + send button for visitor messages.
  * Supports Enter to send (Shift+Enter for newline).
+ * Enforces a 1000-character limit matching the server-side validation.
  */
 
 "use client";
 
 import { useState, useRef } from "react";
+
+const MAX_LENGTH = 1000;
+const WARN_THRESHOLD = 900; // show counter when approaching limit
 
 /**
  * @param {{
@@ -36,12 +40,16 @@ export default function MessageInput({ onSend, disabled = false }) {
   }
 
   function handleInput(e) {
-    setValue(e.target.value);
+    const newValue = e.target.value.slice(0, MAX_LENGTH);
+    setValue(newValue);
     // Auto-grow textarea
     const el = e.target;
     el.style.height = "auto";
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
   }
+
+  const remaining = MAX_LENGTH - value.length;
+  const showCounter = value.length >= WARN_THRESHOLD;
 
   return (
     <div className="p-3 border-t border-border bg-surface">
@@ -54,6 +62,7 @@ export default function MessageInput({ onSend, disabled = false }) {
           onKeyDown={handleKeyDown}
           placeholder="Ketik pesan..."
           disabled={disabled}
+          maxLength={MAX_LENGTH}
           className="flex-1 bg-transparent text-sm text-text-primary placeholder-text-muted outline-none resize-none leading-relaxed disabled:opacity-50"
           style={{ height: "auto", maxHeight: "120px", overflowY: "auto" }}
         />
@@ -74,9 +83,16 @@ export default function MessageInput({ onSend, disabled = false }) {
           </svg>
         </button>
       </div>
-      <p className="text-[10px] text-text-muted text-center mt-1.5">
-        Powered by Kaia · AI Assistant
-      </p>
+      <div className="flex items-center justify-between mt-1.5 px-0.5">
+        <p className="text-[10px] text-text-muted">
+          Powered by Kaia · AI Assistant
+        </p>
+        {showCounter && (
+          <p className={`font-mono text-[10px] ${remaining <= 50 ? "text-red-400" : "text-text-muted"}`}>
+            {remaining}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

@@ -35,6 +35,8 @@ export default function DashboardPage() {
   const [newCount, setNewCount] = useState(0);
   const [mobileView, setMobileView] = useState("list"); // "list" | "detail"
   const [activeTab, setActiveTab] = useState("conversations"); // "conversations" | "content"
+  const [convFilter, setConvFilter] = useState("active"); // "active" | "all"
+  const [analytics, setAnalytics] = useState(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -52,6 +54,17 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error("Fetch conversations error:", err);
+    }
+  }, []);
+
+  /** Fetch aggregate analytics stats */
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      const res = await fetch("/api/analytics");
+      const data = await res.json();
+      if (!data.error) setAnalytics(data);
+    } catch (err) {
+      console.error("Fetch analytics error:", err);
     }
   }, []);
 
@@ -76,9 +89,13 @@ export default function DashboardPage() {
   useEffect(() => {
     if (status !== "authenticated") return;
     fetchConversations();
-    const interval = setInterval(fetchConversations, POLL_INTERVAL);
+    fetchAnalytics();
+    const interval = setInterval(() => {
+      fetchConversations();
+      fetchAnalytics();
+    }, POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, [status, fetchConversations]);
+  }, [status, fetchConversations, fetchAnalytics]);
 
   // Load messages when conversation selected
   useEffect(() => {
@@ -199,6 +216,10 @@ export default function DashboardPage() {
   }
 
   const selectedConversation = conversations.find((c) => c.id === selectedId);
+  const filteredConversations =
+    convFilter === "active"
+      ? conversations.filter((c) => c.status === "active")
+      : conversations;
 
   if (status === "loading") {
     return (
@@ -295,13 +316,60 @@ export default function DashboardPage() {
             mobileView === "detail" ? "hidden sm:flex" : "flex"
           )}
         >
-          <div className="px-4 py-3 border-b border-border flex-shrink-0">
+          {/* Analytics stats strip */}
+          {analytics && (
+            <div className="px-4 py-3 border-b border-border grid grid-cols-2 gap-x-3 gap-y-2">
+              <div>
+                <p className="font-mono text-[10px] text-text-muted uppercase tracking-wide">Visitors</p>
+                <p className="font-mono text-sm font-medium text-text-primary">{analytics.totalVisitors}</p>
+              </div>
+              <div>
+                <p className="font-mono text-[10px] text-text-muted uppercase tracking-wide">Active</p>
+                <p className="font-mono text-sm font-medium text-accent">{analytics.activeConversations}</p>
+              </div>
+              <div>
+                <p className="font-mono text-[10px] text-text-muted uppercase tracking-wide">Resolved / mo</p>
+                <p className="font-mono text-sm font-medium text-text-primary">{analytics.resolvedThisMonth}</p>
+              </div>
+              <div>
+                <p className="font-mono text-[10px] text-text-muted uppercase tracking-wide">Messages / mo</p>
+                <p className="font-mono text-sm font-medium text-text-primary">{analytics.messagesThisMonth}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Filter + count row */}
+          <div className="px-4 py-2.5 border-b border-border flex-shrink-0 flex items-center justify-between gap-2">
             <p className="font-mono text-xs text-text-muted">
-              {conversations.length} conversation{conversations.length !== 1 ? "s" : ""}
+              {filteredConversations.length} conversation{filteredConversations.length !== 1 ? "s" : ""}
             </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setConvFilter("active")}
+                className={clsx(
+                  "font-mono text-[10px] px-2 py-0.5 rounded border transition-colors",
+                  convFilter === "active"
+                    ? "bg-accent/10 text-accent border-accent/30"
+                    : "text-text-muted border-border hover:text-text-primary"
+                )}
+              >
+                Active
+              </button>
+              <button
+                onClick={() => setConvFilter("all")}
+                className={clsx(
+                  "font-mono text-[10px] px-2 py-0.5 rounded border transition-colors",
+                  convFilter === "all"
+                    ? "bg-accent/10 text-accent border-accent/30"
+                    : "text-text-muted border-border hover:text-text-primary"
+                )}
+              >
+                All
+              </button>
+            </div>
           </div>
           <ConversationList
-            conversations={conversations}
+            conversations={filteredConversations}
             selectedId={selectedId}
             onSelect={handleSelect}
           />
