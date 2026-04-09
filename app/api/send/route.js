@@ -1,6 +1,6 @@
 /**
  * app/api/send/route.js — Owner manual reply to a conversation.
- * POST { conversationId, content } → saves message as role "owner", emits via Socket.io
+ * POST { conversationId, content } → saves message as role "owner", emits via Pusher
  * Protected: only authenticated owner can call this.
  */
 
@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import pusher from "@/lib/pusher";
 
 export async function POST(req) {
   try {
@@ -50,17 +51,15 @@ export async function POST(req) {
       data: { updatedAt: new Date() },
     });
 
-    // Emit to both visitor room and dashboard
-    if (global.io) {
-      global.io.to(conversationId).emit("new_message", {
-        conversationId,
-        message,
-      });
-      global.io.to("dashboard").emit("new_message", {
-        conversationId,
-        message,
-      });
-    }
+    // Emit to both visitor conversation channel and dashboard channel
+    await pusher.trigger(`private-conversation-${conversationId}`, "new_message", {
+      conversationId,
+      message,
+    });
+    await pusher.trigger("private-dashboard", "new_message", {
+      conversationId,
+      message,
+    });
 
     return NextResponse.json({ message });
   } catch (error) {

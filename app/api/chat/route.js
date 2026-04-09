@@ -1,7 +1,7 @@
 /**
  * app/api/chat/route.js — Handle inbound visitor messages.
  * POST { conversationId, content } → saves message, calls OpenAI if mode="ai"
- * Emits Socket.io events for realtime delivery.
+ * Emits Pusher events for realtime delivery.
  *
  * Security:
  *  - Rate limit: 10 messages per minute per conversationId (fallback to IP).
@@ -13,6 +13,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getKaiaReply } from "@/lib/openai";
 import { checkRateLimit } from "@/lib/rateLimit";
+import pusher from "@/lib/pusher";
 
 /** Maximum allowed message length (characters). */
 const MAX_CONTENT_LENGTH = 1000;
@@ -112,13 +113,11 @@ export async function POST(req) {
     });
 
     // Notify dashboard of the new visitor message in realtime
-    if (global.io) {
-      global.io.to("dashboard").emit("new_message", {
-        conversationId,
-        message: userMessage,
-        visitor: conversation.visitor,
-      });
-    }
+    await pusher.trigger("private-dashboard", "new_message", {
+      conversationId,
+      message: userMessage,
+      visitor: conversation.visitor,
+    });
 
     // If mode is "human", do not call OpenAI — owner handles this
     if (conversation.mode === "human") {
@@ -127,10 +126,12 @@ export async function POST(req) {
 
     // --- AI mode: call Kaia ---
 
-    // Emit typing indicator to the visitor's room
-    if (global.io) {
-      global.io.to(conversationId).emit("kaia_typing", { conversationId });
-    }
+    // Emit typing indicator to the visitor's conversation channel
+    await pusher.trigger(
+      `private-conversation-${conversationId}`,
+      "kaia_typing",
+      { conversationId }
+    );
 
     // Build history (all previous messages, new one already in DB)
     const history = conversation.messages; // messages before the new one
@@ -152,18 +153,17 @@ export async function POST(req) {
       },
     });
 
-    // Emit Kaia's reply to the visitor's room
-    if (global.io) {
-      global.io.to(conversationId).emit("new_message", {
-        conversationId,
-        message: assistantMessage,
-      });
-      // Also notify dashboard
-      global.io.to("dashboard").emit("new_message", {
-        conversationId,
-        message: assistantMessage,
-      });
-    }
+    // Emit Kaia's reply to the visitor's conversation channel
+    await pusher.trigger(`private-conversation-${conversationId}`, "new_message", {
+      conversationId,
+      message: assistantMessage,
+    });
+
+    // Also notify dashboard
+    await pusher.trigger("private-dashboard", "new_message", {
+      conversationId,
+      message: assistantMessage,
+    });
 
     return NextResponse.json({ message: userMessage, aiReply: assistantMessage });
   } catch (error) {

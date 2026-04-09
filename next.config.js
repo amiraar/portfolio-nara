@@ -19,7 +19,7 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
-  // Custom server handles Socket.io; disable Next.js built-in server actions interference
+  // Keep Prisma as external package in server components.
   experimental: {
     serverComponentsExternalPackages: ["@prisma/client", "prisma"],
   },

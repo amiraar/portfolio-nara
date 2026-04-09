@@ -5,7 +5,7 @@
  * - Bubble appears after 3s delay with fade-in animation
  * - Tooltip "Chat with Kaia" shown before first click
  * - VisitorForm shown once; result cached in localStorage
- * - Realtime messages via Socket.io
+ * - Realtime messages via Pusher Channels
  * - Typing indicator emitted as "kaia_typing" event
  */
 
@@ -16,7 +16,7 @@ import { clsx } from "clsx";
 import VisitorForm from "./VisitorForm";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
-import { getSocket } from "@/lib/socket";
+import { getPusherClient } from "@/lib/pusherClient";
 
 export default function ChatWidget() {
   /** @type {["hidden"|"bubble"|"open"]} */
@@ -80,12 +80,13 @@ export default function ChatWidget() {
     }
   }, []);
 
-  // Set up Socket.io listeners when conversation is available
+  // Set up Pusher listeners when conversation is available
   useEffect(() => {
     if (!conversation?.id) return;
 
-    const socket = getSocket();
-    socket.emit("join_conversation", conversation.id);
+    const pusher = getPusherClient();
+    const channelName = `private-conversation-${conversation.id}`;
+    const channel = pusher.subscribe(channelName);
 
     function onNewMessage({ message }) {
       setMessages((prev) => {
@@ -105,12 +106,13 @@ export default function ChatWidget() {
       setIsTyping(true);
     }
 
-    socket.on("new_message", onNewMessage);
-    socket.on("kaia_typing", onKaiaTyping);
+    channel.bind("new_message", onNewMessage);
+    channel.bind("kaia_typing", onKaiaTyping);
 
     return () => {
-      socket.off("new_message", onNewMessage);
-      socket.off("kaia_typing", onKaiaTyping);
+      channel.unbind("new_message", onNewMessage);
+      channel.unbind("kaia_typing", onKaiaTyping);
+      pusher.unsubscribe(channelName);
     };
   }, [conversation?.id]);
 
@@ -161,7 +163,7 @@ export default function ChatWidget() {
             )
           );
         }
-        // aiReply arrives via Socket.io ("new_message" event)
+        // aiReply arrives via Pusher ("new_message" event)
       } catch (err) {
         console.error("Send error:", err);
         setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));

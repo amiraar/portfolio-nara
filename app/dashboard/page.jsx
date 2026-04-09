@@ -6,7 +6,7 @@
  * - Full message history for selected conversation
  * - Takeover / Hand back to Kaia controls
  * - Manual owner reply
- * - Realtime updates via Socket.io
+ * - Realtime updates via Pusher Channels
  */
 
 "use client";
@@ -19,7 +19,7 @@ import ConversationList from "@/components/dashboard/ConversationList";
 import ConversationDetail from "@/components/dashboard/ConversationDetail";
 import OwnerReply from "@/components/dashboard/OwnerReply";
 import ContentEditor from "@/components/dashboard/ContentEditor";
-import { getSocket } from "@/lib/socket";
+import { getPusherClient } from "@/lib/pusherClient";
 
 const POLL_INTERVAL = 30_000; // 30 seconds
 
@@ -102,12 +102,13 @@ export default function DashboardPage() {
     if (selectedId) loadConversation(selectedId);
   }, [selectedId, loadConversation]);
 
-  // Socket.io: join dashboard room + listen for new messages / mode changes
+  // Pusher: subscribe dashboard channel + listen for new messages / mode changes
   useEffect(() => {
     if (status !== "authenticated") return;
 
-    const socket = getSocket();
-    socket.emit("join_dashboard");
+    const pusher = getPusherClient();
+    const channelName = "private-dashboard";
+    const channel = pusher.subscribe(channelName);
 
     function onNewMessage({ conversationId, message }) {
       // Append to selected conversation messages
@@ -131,12 +132,13 @@ export default function DashboardPage() {
       );
     }
 
-    socket.on("new_message", onNewMessage);
-    socket.on("mode_changed", onModeChanged);
+    channel.bind("new_message", onNewMessage);
+    channel.bind("mode_changed", onModeChanged);
 
     return () => {
-      socket.off("new_message", onNewMessage);
-      socket.off("mode_changed", onModeChanged);
+      channel.unbind("new_message", onNewMessage);
+      channel.unbind("mode_changed", onModeChanged);
+      pusher.unsubscribe(channelName);
     };
   }, [status, selectedId, fetchConversations]);
 

@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import pusher from "@/lib/pusher";
 
 export async function PATCH(req) {
   try {
@@ -35,17 +36,15 @@ export async function PATCH(req) {
       data: { mode },
     });
 
-    // Notify all parties about mode change via Socket.io
-    if (global.io) {
-      global.io.to(conversationId).emit("mode_changed", {
-        conversationId,
-        mode,
-      });
-      global.io.to("dashboard").emit("mode_changed", {
-        conversationId,
-        mode,
-      });
-    }
+    // Notify all parties about mode change via Pusher
+    await pusher.trigger(`private-conversation-${conversationId}`, "mode_changed", {
+      conversationId,
+      mode,
+    });
+    await pusher.trigger("private-dashboard", "mode_changed", {
+      conversationId,
+      mode,
+    });
 
     return NextResponse.json({ conversation });
   } catch (error) {
