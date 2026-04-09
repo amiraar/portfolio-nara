@@ -1,6 +1,6 @@
 # Nara — Portfolio + Kaia Chat Assistant
 
-Personal portfolio website for **Mohammad Amirul Kurniawan Putranto** with an integrated AI chat assistant named **Kaia**. Built with Next.js 14, Socket.io realtime, OpenAI, and a private owner dashboard.
+Personal portfolio website for **Mohammad Amirul Kurniawan Putranto** with an integrated AI chat assistant named **Kaia**. Built with Next.js 14, Pusher Channels realtime, OpenAI, and a private owner dashboard.
 
 ## 🚀 Getting Started
 
@@ -8,6 +8,7 @@ Personal portfolio website for **Mohammad Amirul Kurniawan Putranto** with an in
 - Node.js 18+
 - PostgreSQL (or Neon account)
 - OpenAI API key
+- Pusher Channels app
 
 ### Installation
 
@@ -37,6 +38,13 @@ OWNER_EMAIL=your@gmail.com
 OWNER_PASSWORD=your-password
 
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+PUSHER_APP_ID=your-app-id
+PUSHER_KEY=your-key
+PUSHER_SECRET=your-secret
+PUSHER_CLUSTER=ap1
+NEXT_PUBLIC_PUSHER_KEY=your-key
+NEXT_PUBLIC_PUSHER_CLUSTER=ap1
 ```
 
 ### Database Setup
@@ -49,7 +57,7 @@ npm run db:generate   # generate Prisma client
 ### Run Development
 
 ```sh
-node server.js        # custom server (Next.js + Socket.io)
+npm run dev
 ```
 
 ### View Database (GUI)
@@ -65,20 +73,20 @@ npm run db:studio     # opens Prisma Studio at localhost:5555
 ```
 Visitor Browser                Owner Browser
      │                              │
-     │  HTTP + Socket.io            │  HTTP + Socket.io
+     │  HTTP + Pusher Channels      │  HTTP + Pusher Channels
      ▼                              ▼
 ┌─────────────────────────────────────────┐
-│          server.js (Node.js)            │
-│   Next.js App Router + Socket.io        │
+│      Next.js App Router (Vercel)        │
+│      Route Handlers + React Client      │
 ├─────────────────────────────────────────┤
 │  /app/api/*  (Next.js Route Handlers)   │
 │  /components/* (React Client Components)│
 └──────────────┬──────────────────────────┘
                │
-       ┌───────┴────────┐
-       ▼                ▼
-  OpenAI API      Neon PostgreSQL
-  (gpt-4.1-mini)  (via Prisma ORM)
+     ┌─────────┼──────────┬───────────────┐
+     ▼         ▼          ▼               ▼
+Pusher Channels OpenAI API  Neon PostgreSQL
+ (realtime)    (gpt-4.1-mini) (via Prisma ORM)
 ```
 
 ---
@@ -92,13 +100,14 @@ Visitor Browser                Owner Browser
 | Chat widget with bubble + tooltip | ✅ |
 | Visitor identification (name + Gmail) with localStorage session | ✅ |
 | Kaia AI replies via OpenAI | ✅ |
-| Realtime messages via Socket.io | ✅ |
+| Realtime messages via Pusher Channels | ✅ |
 | Typing indicator | ✅ |
 | Owner dashboard (protected) | ✅ |
 | Takeover / Hand back to Kaia | ✅ |
 | Owner manual reply | ✅ |
 | Resolve conversation | ✅ |
-| Polling every 30s + Socket.io realtime on dashboard | ✅ |
+| Polling every 30s + Pusher realtime on dashboard | ✅ |
+| Vercel-compatible deployment (no custom server) | ✅ |
 | Mobile responsive | ✅ |
 
 ---
