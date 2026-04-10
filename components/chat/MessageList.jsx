@@ -27,9 +27,9 @@ export default function MessageList({ messages, isTyping }) {
       {messages.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-3 flex-1 py-8">
           <div className="w-12 h-12 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M17 3H3a1 1 0 00-1 1v10a1 1 0 001 1h3l3 3 3-3h5a1 1 0 001-1V4a1 1 0 00-1-1z" stroke="#C9A96E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.7"/>
-              <path d="M6 8h8M6 11.5h5" stroke="#C9A96E" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.7"/>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-accent">
+              <path d="M17 3H3a1 1 0 00-1 1v10a1 1 0 001 1h3l3 3 3-3h5a1 1 0 001-1V4a1 1 0 00-1-1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.7"/>
+              <path d="M6 8h8M6 11.5h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.7"/>
             </svg>
           </div>
           <div className="text-center">

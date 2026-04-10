@@ -139,13 +139,13 @@ export default function VisitorForm({ onSubmit }) {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-accent text-background font-medium text-sm rounded-lg py-2.5 hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full bg-accent text-background font-sans font-medium text-sm rounded-lg py-2.5 hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {loading ? (
             <>
-              <svg className="animate-spin" width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="7" cy="7" r="5.5" stroke="#0A0A0A" strokeWidth="1.5" strokeOpacity="0.3"/>
-                <path d="M7 1.5A5.5 5.5 0 0112.5 7" stroke="#0A0A0A" strokeWidth="1.5" strokeLinecap="round"/>
+              <svg className="animate-spin text-background" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.3"/>
+                <path d="M7 1.5A5.5 5.5 0 0112.5 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
               Connecting...
             </>

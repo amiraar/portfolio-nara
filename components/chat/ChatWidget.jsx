@@ -203,10 +203,10 @@ export default function ChatWidget() {
       {/* Chat window — full-screen on mobile, floating on desktop */}
       {widgetState === "open" && (
         <div
-          className="fixed z-50 bg-surface border border-border shadow-2xl flex flex-col overflow-hidden animate-slide-up
+          className="fixed z-50 bg-surface border border-border shadow-2xl flex flex-col overflow-hidden animate-slide-up font-sans
             inset-0 rounded-none
             sm:inset-auto sm:bottom-24 sm:right-5 sm:w-[360px] sm:max-w-[calc(100vw-20px)] sm:h-[520px] sm:max-h-[calc(100vh-120px)] sm:rounded-2xl"
-          style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(201,169,110,0.08)" }}
+          style={{ boxShadow: "0 20px 60px rgb(var(--color-bg) / 0.5), 0 0 0 1px rgb(var(--color-accent) / 0.1)" }}
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border bg-surface/80 backdrop-blur-sm flex-shrink-0">
@@ -243,26 +243,26 @@ export default function ChatWidget() {
                 ) : null}
                 <button
                   onClick={() => setShowResetConfirm((v) => !v)}
-                  className="w-7 h-7 rounded-lg hover:bg-border flex items-center justify-center transition-colors"
+                  className="w-7 h-7 rounded-lg hover:bg-border flex items-center justify-center transition-colors text-text-muted"
                   aria-label="Mulai percakapan baru"
                   title="Mulai percakapan baru"
                 >
                   <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                    <path d="M11.5 2A6 6 0 101 6.5" stroke="#6B6B6B" strokeWidth="1.4" strokeLinecap="round"/>
-                    <path d="M1 3.5V6.5H4" stroke="#6B6B6B" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M11.5 2A6 6 0 101 6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                    <path d="M1 3.5V6.5H4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </button>
               </div>
             )}
             <button
               onClick={closeWidget}
-              className="w-7 h-7 rounded-lg hover:bg-border flex items-center justify-center transition-colors flex-shrink-0"
+              className="w-7 h-7 rounded-lg hover:bg-border flex items-center justify-center transition-colors flex-shrink-0 text-text-muted"
               aria-label="Close chat"
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                 <path
                   d="M1 1l10 10M11 1L1 11"
-                  stroke="#6B6B6B"
+                  stroke="currentColor"
                   strokeWidth="1.5"
                   strokeLinecap="round"
                 />
@@ -312,8 +312,8 @@ export default function ChatWidget() {
 
         <button
           onClick={widgetState === "open" ? closeWidget : openWidget}
-          className="relative w-14 h-14 rounded-full bg-accent hover:bg-accent-hover transition-all duration-300 shadow-lg flex items-center justify-center group animate-fade-in"
-          style={{ boxShadow: "0 4px 24px rgba(201,169,110,0.35)" }}
+          className="relative w-14 h-14 rounded-full bg-accent hover:bg-accent-hover transition-all duration-300 shadow-lg flex items-center justify-center group animate-fade-in text-background"
+          style={{ boxShadow: "0 4px 24px rgb(var(--color-accent) / 0.35)" }}
           aria-label={widgetState === "open" ? "Close chat" : "Open chat"}
         >
           {/* Unread badge */}
@@ -326,7 +326,7 @@ export default function ChatWidget() {
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
               <path
                 d="M2 2l14 14M16 2L2 16"
-                stroke="#0A0A0A"
+                stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round"
               />
@@ -335,14 +335,14 @@ export default function ChatWidget() {
             <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
               <path
                 d="M19 3H3a1 1 0 00-1 1v12a1 1 0 001 1h3l3 3 3-3h7a1 1 0 001-1V4a1 1 0 00-1-1z"
-                stroke="#0A0A0A"
+                stroke="currentColor"
                 strokeWidth="1.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
               <path
                 d="M7 9h8M7 13h5"
-                stroke="#0A0A0A"
+                stroke="currentColor"
                 strokeWidth="1.8"
                 strokeLinecap="round"
               />

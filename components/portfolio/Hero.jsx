@@ -5,14 +5,26 @@
 
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePortfolioContent } from "@/lib/usePortfolioContent";
 import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
 
 /** @param {{ onChatOpen: () => void }} props */
 export default function Hero({ onChatOpen }) {
   const containerRef = useRef(null);
+  const sectionRef = useRef(null);
+  const [mousePos, setMousePos] = useState({ x: 25, y: 33 });
   const { data } = usePortfolioContent("hero", PORTFOLIO_DEFAULTS.hero);
+
+  // Track mouse position relative to the section
+  function handleMouseMove(e) {
+    const rect = sectionRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setMousePos({
+      x: ((e.clientX - rect.left) / rect.width) * 100,
+      y: ((e.clientY - rect.top) / rect.height) * 100,
+    });
+  }
 
   // Staggered section reveal on mount
   useEffect(() => {
@@ -30,15 +42,20 @@ export default function Hero({ onChatOpen }) {
   return (
     <section
       id="hero"
+      ref={sectionRef}
+      onMouseMove={handleMouseMove}
       className="min-h-screen flex items-center relative overflow-hidden"
     >
-      {/* Subtle background orb */}
+      {/* Mouse-tracking background orb */}
       <div
-        className="absolute top-1/3 left-1/4 w-[500px] h-[500px] rounded-full pointer-events-none"
+        className="absolute w-[600px] h-[600px] rounded-full pointer-events-none"
         style={{
           background:
-            "radial-gradient(circle, rgba(201,169,110,0.04) 0%, transparent 70%)",
+            "radial-gradient(circle, rgba(201,169,110,0.055) 0%, transparent 65%)",
+          left: `${mousePos.x}%`,
+          top: `${mousePos.y}%`,
           transform: "translate(-50%, -50%)",
+          transition: "left 0.6s cubic-bezier(0.16,1,0.3,1), top 0.6s cubic-bezier(0.16,1,0.3,1)",
         }}
       />
 

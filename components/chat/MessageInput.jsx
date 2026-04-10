@@ -69,13 +69,13 @@ export default function MessageInput({ onSend, disabled = false }) {
         <button
           onClick={handleSend}
           disabled={disabled || !value.trim()}
-          className="flex-shrink-0 w-8 h-8 rounded-lg bg-accent flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex-shrink-0 w-8 h-8 rounded-lg bg-accent flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-background"
           aria-label="Send message"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path
               d="M13 1L1 5.5L6.5 7.5M13 1L8 13L6.5 7.5M13 1L6.5 7.5"
-              stroke="#0A0A0A"
+              stroke="currentColor"
               strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
