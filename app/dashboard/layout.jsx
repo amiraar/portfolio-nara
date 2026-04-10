@@ -1,8 +1,14 @@
 /**
- * app/dashboard/layout.jsx — Dashboard layout.
- * The auth guard (redirect to /login) is handled inside the page itself via useSession.
+ * app/dashboard/layout.jsx — Dashboard layout with server-side auth guard.
+ * Redirects to /login on the server before any HTML is sent — no flash of content.
  */
 
-export default function DashboardLayout({ children }) {
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/authOptions";
+
+export default async function DashboardLayout({ children }) {
+  const session = await getServerSession(authOptions);
+  if (!session) redirect("/login");
   return <>{children}</>;
 }

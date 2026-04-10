@@ -7,20 +7,12 @@
 
 import { useEffect, useRef } from "react";
 import { usePortfolioContent } from "@/lib/usePortfolioContent";
-
-const DEFAULT = {
-  name: "Mohammad Amirul Kurniawan Putranto",
-  tagline:
-    "Backend-focused developer specializing in Laravel & CodeIgniter. Building production systems with AI-driven features, workflow automation, and thoughtful UI/UX.",
-  location: "Yogyakarta, Indonesia",
-  email: "amrlkurniawn19@gmail.com",
-  linkedin: "https://linkedin.com/in/mohammad-amirul-kurniawan-putranto/",
-};
+import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
 
 /** @param {{ onChatOpen: () => void }} props */
 export default function Hero({ onChatOpen }) {
   const containerRef = useRef(null);
-  const { data } = usePortfolioContent("hero", DEFAULT);
+  const { data } = usePortfolioContent("hero", PORTFOLIO_DEFAULTS.hero);
 
   // Staggered section reveal on mount
   useEffect(() => {
@@ -65,16 +57,24 @@ export default function Hero({ onChatOpen }) {
           className="font-display text-4xl sm:text-6xl lg:text-7xl font-medium text-text-primary leading-[1.05] tracking-tight"
           style={{ opacity: 0, transform: "translateY(16px)", transition: "all 0.6s cubic-bezier(0.16,1,0.3,1)" }}
         >
-          {data.name.split(" ")[0]}
-          <br />
-          <span className="text-accent">{data.name.split(" ")[1]}</span>
-          <br />
-          {data.name.split(" ").slice(2).join(" ")}
+            {(() => {
+              const parts = (data.name ?? "").split(" ");
+              const line1 = parts[0] ?? "";
+              const line2 = parts.length > 1 ? parts[1] : null;
+              const line3 = parts.length > 2 ? parts.slice(2).join(" ") : null;
+              return (
+                <>
+                  {line1}
+                  {line2 && (<><br /><span className="text-accent">{line2}</span></>)}
+                  {line3 && (<><br />{line3}</>)}
+                </>
+              );
+            })()}
         </h1>
 
         <p
           data-reveal
-          className="mt-6 text-text-muted text-base sm:text-lg max-w-md leading-relaxed"
+          className="mt-4 text-text-muted text-lg sm:text-xl font-light leading-relaxed max-w-xl"
           style={{ opacity: 0, transform: "translateY(16px)", transition: "all 0.6s cubic-bezier(0.16,1,0.3,1)" }}
         >
           {data.tagline}

@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePortfolioContent } from "@/lib/usePortfolioContent";
+import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
 
 const DEFAULT_PROJECTS = [
   {
@@ -82,7 +83,7 @@ const DEFAULT_PROJECTS = [
 
 export default function Projects() {
   const sectionRef = useRef(null);
-  const { data: projects } = usePortfolioContent("projects", DEFAULT_PROJECTS);
+  const { data: projects } = usePortfolioContent("projects", PORTFOLIO_DEFAULTS.projects);
 
   useEffect(() => {
     const el = sectionRef.current;

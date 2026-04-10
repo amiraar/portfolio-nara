@@ -7,6 +7,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePortfolioContent } from "@/lib/usePortfolioContent";
+import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
 
 const DEFAULT_SKILLS = {
   skills: {
@@ -32,7 +33,7 @@ const DEFAULT_SKILLS = {
 
 export default function Skills() {
   const sectionRef = useRef(null);
-  const { data } = usePortfolioContent("skills", DEFAULT_SKILLS);
+  const { data } = usePortfolioContent("skills", PORTFOLIO_DEFAULTS.skills);
 
   useEffect(() => {
     const el = sectionRef.current;

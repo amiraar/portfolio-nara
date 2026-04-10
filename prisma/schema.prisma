@@ -15,6 +15,8 @@ model Visitor {
   id            String         @id @default(cuid())
   name          String
   email         String         @unique
+  /// Server-issued token stored in HttpOnly cookie for ownership verification
+  token         String?        @unique
   createdAt     DateTime       @default(now())
   conversations Conversation[]
 }

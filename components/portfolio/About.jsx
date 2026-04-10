@@ -7,6 +7,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePortfolioContent } from "@/lib/usePortfolioContent";
+import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
 
 const DEFAULT_ABOUT = {
   heading: "Building systems that actually work.",
@@ -26,7 +27,7 @@ const DEFAULT_ABOUT = {
 
 export default function About() {
   const sectionRef = useRef(null);
-  const { data } = usePortfolioContent("about", DEFAULT_ABOUT);
+  const { data } = usePortfolioContent("about", PORTFOLIO_DEFAULTS.about);
 
   useEffect(() => {
     const el = sectionRef.current;
@@ -52,8 +53,11 @@ export default function About() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
           <div>
             <h2 className="font-display text-3xl lg:text-4xl font-medium text-text-primary leading-tight mb-6">
-              {data.heading.replace(" actually work.", " ")}
-              <span className="text-accent italic">actually work.</span>
+              {data.heading ?? ""}
+              {data.headingAccent
+                ? <span className="text-accent italic"> {data.headingAccent}</span>
+                : null
+              }
             </h2>
             <div className="space-y-4 text-text-muted text-base leading-relaxed">
               {(data.paragraphs ?? []).map((p, i) => (

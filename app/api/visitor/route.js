@@ -4,6 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import prisma from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rateLimit";
 
@@ -68,10 +69,10 @@ export async function POST(req) {
     }
 
     // Upsert visitor (create if new, return existing if not)
-    const visitor = await prisma.visitor.upsert({
+    let visitor = await prisma.visitor.upsert({
       where: { email: safeEmail },
+      create: { name: safeName, email: safeEmail, token: randomUUID() },
       update: {}, // Do not overwrite name on return visit
-      create: { name: safeName, email: safeEmail },
       include: {
         conversations: {
           where: { status: "active" },
@@ -86,6 +87,22 @@ export async function POST(req) {
       },
     });
 
+    // Backfill token for visitors registered before this feature was added
+    if (!visitor.token) {
+      visitor = await prisma.visitor.update({
+        where: { id: visitor.id },
+        data: { token: randomUUID() },
+        include: {
+          conversations: {
+            where: { status: "active" },
+            orderBy: { updatedAt: "desc" },
+            take: 1,
+            include: { messages: { orderBy: { timestamp: "asc" } } },
+          },
+        },
+      });
+    }
+
     // If no active conversation exists, create one
     let conversation = visitor.conversations[0] ?? null;
     if (!conversation) {
@@ -95,7 +112,20 @@ export async function POST(req) {
       });
     }
 
-    return NextResponse.json({ visitor, conversation });
+    // Issue HttpOnly cookie so the server can verify visitor identity on /api/chat
+    const isProd = process.env.NODE_ENV === "production";
+    const cookieAttributes = [
+      `visitor-token=${visitor.token}`,
+      "HttpOnly",
+      "SameSite=Strict",
+      "Path=/",
+      "Max-Age=2592000", // 30 days
+      ...(isProd ? ["Secure"] : []),
+    ].join("; ");
+
+    const response = NextResponse.json({ visitor, conversation });
+    response.headers.set("Set-Cookie", cookieAttributes);
+    return response;
   } catch (error) {
     console.error("[POST /api/visitor]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

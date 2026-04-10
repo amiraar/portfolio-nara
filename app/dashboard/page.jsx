@@ -13,7 +13,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import ConversationList from "@/components/dashboard/ConversationList";
 import ConversationDetail from "@/components/dashboard/ConversationDetail";
@@ -25,7 +24,6 @@ const POLL_INTERVAL = 30_000; // 30 seconds
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
 
   const [conversations, setConversations] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -37,11 +35,9 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("conversations"); // "conversations" | "content"
   const [convFilter, setConvFilter] = useState("active"); // "active" | "all"
   const [analytics, setAnalytics] = useState(null);
+  const [error, setError] = useState(null);
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
-  }, [status, router]);
+  // Initial load + polling (only when session is confirmed by the client)
 
   /** Fetch all conversations from the server */
   const fetchConversations = useCallback(async () => {
@@ -302,6 +298,20 @@ export default function DashboardPage() {
           </button>
         </div>
       </header>
+
+      {/* Error banner — dismissible, shown when any fetch/action fails */}
+      {error && (
+        <div className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-2 bg-red-400/10 border-b border-red-400/20">
+          <p className="font-mono text-xs text-red-400">{error}</p>
+          <button
+            onClick={() => setError(null)}
+            className="flex-shrink-0 text-red-400/60 hover:text-red-400 transition-colors font-mono text-xs"
+            aria-label="Dismiss error"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Main layout */}
       {activeTab === "content" ? (

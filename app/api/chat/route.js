@@ -25,7 +25,7 @@ const AI_FALLBACK_MESSAGE =
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { conversationId, content, visitorId } = body;
+    const { conversationId, content } = body;
 
     if (!conversationId || !content?.trim()) {
       return NextResponse.json(
@@ -34,11 +34,19 @@ export async function POST(req) {
       );
     }
 
-    if (!visitorId) {
+    // --- Verify visitor identity via HttpOnly cookie (not request body) ---
+    const visitorToken = req.cookies.get("visitor-token")?.value;
+    if (!visitorToken) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
+    }
+
+    // Resolve visitor from the signed server-issued token
+    const tokenOwner = await prisma.visitor.findUnique({ where: { token: visitorToken } });
+    if (!tokenOwner) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // --- XSS sanitization + input length validation ---
@@ -92,8 +100,8 @@ export async function POST(req) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
-    // --- Ownership check: visitorId must match the conversation owner ---
-    if (conversation.visitorId !== visitorId) {
+    // --- Ownership check: cookie-resolved visitor must own this conversation ---
+    if (conversation.visitorId !== tokenOwner.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

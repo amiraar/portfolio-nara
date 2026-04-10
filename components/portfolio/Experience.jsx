@@ -7,6 +7,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePortfolioContent } from "@/lib/usePortfolioContent";
+import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
 
 const DEFAULT_EXPERIENCE = [
   {
@@ -54,7 +55,7 @@ const DEFAULT_EXPERIENCE = [
 
 export default function Experience() {
   const sectionRef = useRef(null);
-  const { data: items } = usePortfolioContent("experience", DEFAULT_EXPERIENCE);
+  const { data: items } = usePortfolioContent("experience", PORTFOLIO_DEFAULTS.experience);
 
   useEffect(() => {
     const el = sectionRef.current;
