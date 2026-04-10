@@ -64,6 +64,15 @@ export default function ChatWidget() {
         const { visitor: v, conversationId } = JSON.parse(stored);
         setVisitor(v);
         setHasSession(true);
+        // Re-issue the HttpOnly visitor-token cookie in case it expired or was cleared.
+        // The /api/visitor upsert is idempotent — safe to call on every return visit.
+        if (v?.email && v?.name) {
+          fetch("/api/visitor", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: v.name, email: v.email }),
+          }).catch(() => {});
+        }
         // Load conversation from server
         fetch(`/api/conversations/${conversationId}`)
           .then((r) => r.json())
