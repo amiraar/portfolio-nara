@@ -151,7 +151,14 @@ export async function POST(req) {
     try {
       replyText = await getKaiaReply(history, trimmed);
     } catch (aiError) {
-      console.error("[OpenAI error]", aiError);
+      console.error("[Kaia fallback triggered]", {
+        conversationId,
+        model: process.env.OPENAI_MODEL ?? "unset",
+        status: aiError?.status ?? aiError?.response?.status ?? "unknown",
+        code: aiError?.code ?? "unknown",
+        message: aiError?.message ?? String(aiError),
+        timestamp: new Date().toISOString(),
+      });
       replyText = AI_FALLBACK_MESSAGE;
     }
 

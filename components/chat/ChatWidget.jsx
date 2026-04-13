@@ -177,13 +177,21 @@ export default function ChatWidget() {
         }
 
         if (data.message) {
-          // API response replaces the optimistic row, while Pusher messages are
-          // deduped by persisted id in onNewMessage.
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === optimistic.id ? { ...data.message } : m
-            )
-          );
+          // Reconcile optimistic + Pusher race safely:
+          // - remove optimistic row
+          // - upsert persisted user message by id
+          setMessages((prev) => {
+            const withoutOptimistic = prev.filter((m) => m.id !== optimistic.id);
+            const existingIndex = withoutOptimistic.findIndex((m) => m.id === data.message.id);
+
+            if (existingIndex >= 0) {
+              return withoutOptimistic.map((m) =>
+                m.id === data.message.id ? { ...m, ...data.message } : m
+              );
+            }
+
+            return [...withoutOptimistic, data.message];
+          });
         }
         // aiReply arrives via Pusher ("new_message" event)
       } catch (err) {
