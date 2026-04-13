@@ -230,7 +230,7 @@ export default function DashboardPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen overflow-hidden bg-background flex flex-col">
       {/* Top bar */}
       <header className="flex-shrink-0 h-12 bg-surface border-b border-border flex items-center justify-between px-4 sm:px-5">
         <div className="flex items-center gap-3 min-w-0">
@@ -315,15 +315,15 @@ export default function DashboardPage() {
 
       {/* Main layout */}
       {activeTab === "content" ? (
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-hidden">
           <ContentEditor />
         </div>
       ) : (
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Sidebar — always visible on desktop; visible on mobile only in list view */}
         <aside
           className={clsx(
-            "border-r border-border bg-surface/40 flex flex-col overflow-hidden",
+            "border-r border-border bg-surface/40 flex flex-col min-h-0 overflow-hidden",
             "w-full sm:w-72 sm:flex-shrink-0",
             mobileView === "detail" ? "hidden sm:flex" : "flex"
           )}
@@ -390,13 +390,13 @@ export default function DashboardPage() {
         {/* Detail panel — always visible on desktop; visible on mobile only in detail view */}
         <main
           className={clsx(
-            "flex-1 flex flex-col overflow-hidden",
+            "flex-1 min-h-0 flex flex-col overflow-hidden",
             mobileView === "list" ? "hidden sm:flex" : "flex"
           )}
         >
           {selectedConversation ? (
             <>
-              <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                 <ConversationDetail
                   conversation={selectedConversation}
                   messages={messages}

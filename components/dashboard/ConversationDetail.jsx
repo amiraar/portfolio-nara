@@ -46,7 +46,7 @@ export default function ConversationDetail({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="flex-shrink-0 px-4 sm:px-5 py-3 sm:py-4 border-b border-border bg-surface/80">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-3">
@@ -135,7 +135,7 @@ export default function ConversationDetail({
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-3">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-5 space-y-3">
         {messages.map((msg) => {
           const isUser = msg.role === "user";
           const isOwnerMsg = msg.role === "owner";

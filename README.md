@@ -28,7 +28,7 @@ Fill in `.env`:
 DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech/neon?sslmode=require&pgbouncer=true
 DIRECT_URL=postgresql://user:pass@ep-xxx.neon.tech/neon?sslmode=require
 
-OPENAI_API_KEY=sk-...
+OPENROUTER_API_KEY=sk-...
 OPENAI_MODEL=gpt-4.1-mini
 MAX_HISTORY=15
 
