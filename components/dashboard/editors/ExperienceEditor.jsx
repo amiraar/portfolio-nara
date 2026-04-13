@@ -6,7 +6,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Field, inputCls, textareaCls, TagInput, BtnDanger, BtnSecondary, PeriodInput } from "./shared";
+import { Field, inputCls, textareaCls, TagInput, BtnDanger, BtnSecondary, PeriodInput } from "./primitives";
 
 const EMPTY_EXP = { company: "", role: "", period: "", description: "", tags: [], current: false };
 

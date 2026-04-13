@@ -6,7 +6,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Field, inputCls, textareaCls, TagInput, BtnDanger, BtnSecondary } from "./shared";
+import { Field, inputCls, textareaCls, TagInput, BtnDanger, BtnSecondary } from "./primitives";
 
 const EMPTY_PROJECT = { name: "", type: "", company: "", description: "", tags: [], link: "", highlight: false, metric: "" };
 

@@ -5,55 +5,22 @@
 
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { usePortfolioContent } from "@/lib/usePortfolioContent";
 import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
-
-const DEFAULT_SKILLS = {
-  skills: {
-    Backend: ["Laravel", "CodeIgniter", "Node.js", "REST API"],
-    Database: ["PostgreSQL", "SQLite", "Prisma ORM"],
-    Cloud: ["AWS S3", "Vercel", "Neon"],
-    Frontend: ["Next.js", "Tailwind CSS", "React"],
-    Design: ["Figma", "Adobe Photoshop", "Adobe Illustrator", "Adobe Premiere Pro"],
-    Mobile: ["Android Studio"],
-    "Soft Skills": ["Leadership", "Communication", "Adaptability", "Time Management", "Problem-solving"],
-  },
-  languages: [
-    { name: "Bahasa Indonesia", level: "Native", pct: 100 },
-    { name: "English", level: "Intermediate", pct: 65 },
-  ],
-  stats: [
-    { label: "Projects shipped", value: "7+" },
-    { label: "Students mentored", value: "30+" },
-    { label: "Years experience", value: "2+" },
-    { label: "GPA", value: "3.82" },
-  ],
-};
+import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
+import PortfolioSectionHeader from "@/components/shared/PortfolioSectionHeader";
 
 export default function Skills() {
   const sectionRef = useRef(null);
   const { data } = usePortfolioContent("skills", PORTFOLIO_DEFAULTS.skills);
-
-  useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) el.classList.add("revealed"); },
-      { threshold: 0.1 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  useRevealOnScroll(sectionRef, 0.1);
 
   return (
     <section id="skills" className="py-28 bg-surface/40">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
         <div ref={sectionRef} className="section-reveal">
-          <div className="flex items-center gap-4 mb-14">
-            <p className="font-mono text-accent text-xs tracking-widest uppercase">04 — Skills</p>
-            <div className="gold-divider flex-1 max-w-[60px]" />
-          </div>
+          <PortfolioSectionHeader number="04" title="Skills" />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Skills grid */}

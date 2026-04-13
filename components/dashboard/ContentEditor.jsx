@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
+import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import HeroEditor from "./editors/HeroEditor";
 import AboutEditor from "./editors/AboutEditor";
 import ExperienceEditor from "./editors/ExperienceEditor";
@@ -35,6 +36,7 @@ export default function ContentEditor() {
   const [status, setStatus] = useState(null); // "saved" | "error"
   const [validationErrors, setValidationErrors] = useState([]);
   const timerRef = useRef(null);
+  const { confirmSwitch } = useUnsavedChangesGuard(dirty);
 
   const loadSection = useCallback(async (section) => {
     setLoading(true);
@@ -119,13 +121,11 @@ export default function ContentEditor() {
 
   function trySwitchSection(nextSection) {
     if (nextSection === activeSection) return;
-    if (dirty) {
-      const ok = window.confirm("Perubahan belum disimpan. Pindah section dan buang perubahan?");
-      if (!ok) return;
-    }
-    setData(null);
-    setValidationErrors([]);
-    setActiveSection(nextSection);
+    confirmSwitch(() => {
+      setData(null);
+      setValidationErrors([]);
+      setActiveSection(nextSection);
+    }, "Perubahan belum disimpan. Pindah section dan buang perubahan?");
   }
 
   async function handleSave() {
@@ -179,9 +179,10 @@ export default function ContentEditor() {
           {status === "error" && <span className="font-mono text-xs text-red-400">✗ Gagal simpan</span>}
           <button
             onClick={() => {
-              if (dirty && !window.confirm("Reset section ini dan buang perubahan yang belum disimpan?")) return;
-              loadSection(activeSection);
-              setValidationErrors([]);
+              confirmSwitch(() => {
+                loadSection(activeSection);
+                setValidationErrors([]);
+              }, "Reset section ini dan buang perubahan yang belum disimpan?");
             }}
             disabled={loading}
             className="font-mono text-xs text-text-muted border border-border px-3 py-1.5 rounded-lg hover:border-text-muted/50 transition-colors disabled:opacity-50">

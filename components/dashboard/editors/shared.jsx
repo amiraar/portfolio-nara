@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 // ─── Style constants ──────────────────────────────────────────────────────
 
@@ -82,6 +82,12 @@ export function Divider() {
 // ─── Period date-picker ───────────────────────────────────────────────────
 
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const SUPPORTS_MONTH_INPUT = (() => {
+  if (typeof document === "undefined") return true;
+  const input = document.createElement("input");
+  input.setAttribute("type", "month");
+  return input.type === "month";
+})();
 
 function monthYearToInput(str) {
   if (!str || str === "Present") return "";
@@ -133,14 +139,8 @@ function composeMonthInput(month, year) {
 
 export function PeriodInput({ value, onChange, current, onCurrentChange }) {
   const { start, end } = parsePeriod(value);
-  const [supportsMonthInput, setSupportsMonthInput] = useState(true);
+  const [supportsMonthInput] = useState(SUPPORTS_MONTH_INPUT);
   const years = getYearOptions();
-
-  useEffect(() => {
-    const input = document.createElement("input");
-    input.setAttribute("type", "month");
-    setSupportsMonthInput(input.type === "month");
-  }, []);
 
   const startParts = splitMonthInput(start);
   const endParts = splitMonthInput(end);

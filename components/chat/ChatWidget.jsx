@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { clsx } from "clsx";
 import VisitorForm from "./VisitorForm";
 import MessageList from "./MessageList";
@@ -19,6 +19,12 @@ import MessageInput from "./MessageInput";
 import { getPusherClient } from "@/lib/pusherClient";
 
 export default function ChatWidget() {
+  /*
+   * Valid widget transitions:
+   * hidden -> bubble -> open
+   * open -> bubble
+   * bubble -> open
+   */
   /** @type {["hidden"|"bubble"|"open"]} */
   const [widgetState, setWidgetState] = useState("hidden");
   const [hasSession, setHasSession] = useState(false);
@@ -30,6 +36,8 @@ export default function ChatWidget() {
   const [sendError, setSendError] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const handleSendRef = useRef(null);
+  const widgetStateRef = useRef(widgetState);
 
   // Show bubble after 3 seconds
   useEffect(() => {
@@ -46,15 +54,20 @@ export default function ChatWidget() {
     return () => window.removeEventListener("open_chat_widget", onOpenRequest);
   }, []);
 
-  // Handle suggested message click from empty state
+  useEffect(() => {
+    widgetStateRef.current = widgetState;
+  }, [widgetState]);
+
+  // Handle suggested message click from empty state with a stable listener.
   useEffect(() => {
     function onSuggested(e) {
-      if (e.detail) handleSend(e.detail);
+      if (e.detail && typeof handleSendRef.current === "function") {
+        handleSendRef.current(e.detail);
+      }
     }
     window.addEventListener("kaia_suggested_message", onSuggested);
     return () => window.removeEventListener("kaia_suggested_message", onSuggested);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversation?.id, sending]);
+  }, []);
 
   // Check localStorage for existing session on mount
   useEffect(() => {
@@ -105,10 +118,9 @@ export default function ChatWidget() {
       });
       setIsTyping(false);
       // Increment unread badge only when widget is closed
-      setWidgetState((ws) => {
-        if (ws !== "open") setUnreadCount((c) => c + 1);
-        return ws;
-      });
+      if (widgetStateRef.current !== "open") {
+        setUnreadCount((c) => c + 1);
+      }
     }
 
     function onKaiaTyping() {
@@ -165,7 +177,8 @@ export default function ChatWidget() {
         }
 
         if (data.message) {
-          // Replace optimistic message with real one from DB
+          // API response replaces the optimistic row, while Pusher messages are
+          // deduped by persisted id in onNewMessage.
           setMessages((prev) =>
             prev.map((m) =>
               m.id === optimistic.id ? { ...data.message } : m
@@ -183,6 +196,10 @@ export default function ChatWidget() {
     },
     [conversation?.id, sending]
   );
+
+  useEffect(() => {
+    handleSendRef.current = handleSend;
+  }, [handleSend]);
 
   function openWidget() {
     setWidgetState("open");

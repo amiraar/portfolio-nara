@@ -13,7 +13,8 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getKaiaReply } from "@/lib/openai";
 import { checkRateLimit } from "@/lib/rateLimit";
-import pusher from "@/lib/pusher";
+import pusher, { emitConversationEvent } from "@/lib/pusher";
+import { touchConversation } from "@/lib/apiRouteUtils";
 
 /** Maximum allowed message length (characters). */
 const MAX_CONTENT_LENGTH = 1000;
@@ -22,6 +23,11 @@ const MAX_CONTENT_LENGTH = 1000;
 const AI_FALLBACK_MESSAGE =
   "Maaf, Kaia sedang tidak tersedia saat ini. Silakan hubungi Amirul langsung di amrlkurniawn19@gmail.com — ia akan segera membalas pesan Anda.";
 
+/**
+ * Persist a visitor chat message and optional AI reply.
+ * @param {Request} req
+ * @returns {Promise<import("next/server").NextResponse>}
+ */
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -115,13 +121,10 @@ export async function POST(req) {
     });
 
     // Update conversation timestamp
-    await prisma.conversation.update({
-      where: { id: conversationId },
-      data: { updatedAt: new Date() },
-    });
+    await touchConversation(conversationId);
 
     // Notify dashboard of the new visitor message in realtime
-    await pusher.trigger("private-dashboard", "new_message", {
+    await emitConversationEvent(conversationId, "new_message", {
       conversationId,
       message: userMessage,
       visitor: conversation.visitor,
@@ -161,14 +164,11 @@ export async function POST(req) {
       },
     });
 
-    // Emit Kaia's reply to the visitor's conversation channel
-    await pusher.trigger(`private-conversation-${conversationId}`, "new_message", {
-      conversationId,
-      message: assistantMessage,
-    });
-
-    // Also notify dashboard
-    await pusher.trigger("private-dashboard", "new_message", {
+    // ChatWidget sends an optimistic message with a temporary id. If Pusher
+    // arrives before the HTTP response, the client replaces the optimistic row
+    // by optimistic id; once API data returns, duplicate-by-id guards keep the
+    // final list stable without double-appending persisted messages.
+    await emitConversationEvent(conversationId, "new_message", {
       conversationId,
       message: assistantMessage,
     });

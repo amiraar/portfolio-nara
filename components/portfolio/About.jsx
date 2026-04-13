@@ -5,50 +5,21 @@
 
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { usePortfolioContent } from "@/lib/usePortfolioContent";
 import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
-
-const DEFAULT_ABOUT = {
-  heading: "Building systems that actually work.",
-  paragraphs: [
-    "Backend-focused Software Developer with hands-on experience building production MVP systems. I specialize in Laravel and CodeIgniter, with a genuine interest in the full product lifecycle — from database design to user interaction.",
-    "Beyond the backend, I bring a strong UI/UX background that lets me think about systems from the user\u2019s perspective. I\u2019ve contributed to reimbursement platforms, AI-driven profile tools, workflow systems, and hospital interfaces — primarily at SoftwareSeni.",
-    "Currently open to new collaborations and opportunities.",
-  ],
-  info: [
-    { label: "Location",   value: "Yogyakarta, Indonesia" },
-    { label: "Currently",  value: "Software Developer @ SoftwareSeni" },
-    { label: "Education",  value: "Informatics, Ahmad Dahlan University — GPA 3.82" },
-    { label: "Focus",      value: "Laravel · CodeIgniter · AI Systems · UI/UX" },
-    { label: "Languages",  value: "Bahasa Indonesia (Native) · English (Intermediate)" },
-  ],
-};
+import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
+import PortfolioSectionHeader from "@/components/shared/PortfolioSectionHeader";
 
 export default function About() {
   const sectionRef = useRef(null);
   const { data } = usePortfolioContent("about", PORTFOLIO_DEFAULTS.about);
-
-  useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) el.classList.add("revealed");
-      },
-      { threshold: 0.15 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  useRevealOnScroll(sectionRef, 0.15);
 
   return (
     <section id="about" className="py-28 max-w-5xl mx-auto px-6 lg:px-8">
       <div ref={sectionRef} className="section-reveal">
-        <div className="flex items-center gap-4 mb-10">
-          <p className="font-mono text-accent text-xs tracking-widest uppercase">01 — About</p>
-          <div className="gold-divider flex-1 max-w-[60px]" />
-        </div>
+        <PortfolioSectionHeader number="01" title="About" className="mb-10" />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
           <div>

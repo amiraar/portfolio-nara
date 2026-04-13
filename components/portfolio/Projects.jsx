@@ -5,104 +5,21 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { usePortfolioContent } from "@/lib/usePortfolioContent";
 import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
-
-const DEFAULT_PROJECTS = [
-  {
-    name: "Racker",
-    type: "Web App",
-    company: "SoftwareSeni",
-    description:
-      "End-to-end reimbursement and request workflow platform. Multi-step approval chains, AWS S3 file storage, in-app and email notification system.",
-    tags: ["Laravel", "PostgreSQL", "AWS S3", "Notifications"],
-    link: null,
-    highlight: true,
-  },
-  {
-    name: "QuickCue",
-    type: "AI Product",
-    company: "SoftwareSeni",
-    description:
-      "AI-driven one-page profile generation tool. Visitors receive unique slug-based shareable URLs. Core APIs and OpenAI integration.",
-    tags: ["Laravel", "OpenAI API", "Slug URLs", "REST API"],
-    link: null,
-    highlight: true,
-  },
-  {
-    name: "CPTool",
-    type: "Admin System",
-    company: "SoftwareSeni",
-    description:
-      "Comprehensive Laravel admin dashboard with Google OAuth, Role-Based Access Control, server-side DataTables for skills and client management.",
-    tags: ["Laravel", "Google OAuth", "RBAC", "DataTables"],
-    link: null,
-  },
-  {
-    name: "UI/UX Study App",
-    type: "UX Design",
-    company: "Ahmad Dahlan University",
-    description:
-      "Mobile app interface designed for 500+ students. User research and iterative design led to a +30% engagement improvement.",
-    tags: ["Figma", "User Research", "Mobile UI"],
-    link: "https://bit.ly/uiuxstudyapp",
-    metric: "+30% engagement",
-  },
-  {
-    name: "UI/UX Laboratorium",
-    type: "UX Design",
-    company: "RSU Mitra Paramedika",
-    description:
-      "Hospital laboratory system interface redesign. Streamlined workflows for clinical staff, reducing processing time by 15%.",
-    tags: ["Figma", "Healthcare UX", "Prototyping"],
-    link: "https://bit.ly/uiuxlaboratorium",
-    metric: "-15% processing time",
-  },
-  {
-    name: "UI/UX Travel & Transportation",
-    type: "UX Design",
-    company: "Personal Project",
-    description:
-      "Booking experience redesign for travel and transport platform. Improved conversion and usability resulting in +20% booking rate.",
-    tags: ["Figma", "UX Research", "Booking Flow"],
-    link: "https://bit.ly/uiuxtravelandtransportation",
-    metric: "+20% bookings",
-  },
-  {
-    name: "UI/UX Farmasi Rawat Jalan",
-    type: "UX Design",
-    company: "Hospital System",
-    description:
-      "Outpatient pharmacy system interface. Optimized dispensing workflow for pharmacy staff, achieving +20% efficiency improvement.",
-    tags: ["Figma", "Healthcare UX", "Workflow Design"],
-    link: "https://bit.ly/uiuxfarmasirawatjalan",
-    metric: "+20% efficiency",
-  },
-];
+import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
+import PortfolioSectionHeader from "@/components/shared/PortfolioSectionHeader";
 
 export default function Projects() {
   const sectionRef = useRef(null);
   const { data: projects } = usePortfolioContent("projects", PORTFOLIO_DEFAULTS.projects);
-
-  useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) el.classList.add("revealed"); },
-      { threshold: 0.08 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  useRevealOnScroll(sectionRef, 0.08);
 
   return (
     <section id="projects" className="py-28 max-w-5xl mx-auto px-6 lg:px-8">
       <div ref={sectionRef} className="section-reveal">
-        <div className="flex items-center gap-4 mb-14">
-          <p className="font-mono text-accent text-xs tracking-widest uppercase">03 — Projects</p>
-          <div className="gold-divider flex-1 max-w-[60px]" />
-        </div>
+        <PortfolioSectionHeader number="03" title="Projects" />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {projects.map((project, i) => (

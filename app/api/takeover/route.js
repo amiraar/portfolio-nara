@@ -5,16 +5,21 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
-import pusher from "@/lib/pusher";
+import { emitConversationEvent } from "@/lib/pusher";
+import { requireOwnerSession, unauthorizedResponse } from "@/lib/apiRouteUtils";
 
+/**
+ * Toggle conversation mode between AI and human takeover.
+ * @param {Request} req
+ * @returns {Promise<import("next/server").NextResponse>}
+ */
 export async function PATCH(req) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await requireOwnerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const body = await req.json();
@@ -37,11 +42,7 @@ export async function PATCH(req) {
     });
 
     // Notify all parties about mode change via Pusher
-    await pusher.trigger(`private-conversation-${conversationId}`, "mode_changed", {
-      conversationId,
-      mode,
-    });
-    await pusher.trigger("private-dashboard", "mode_changed", {
+    await emitConversationEvent(conversationId, "mode_changed", {
       conversationId,
       mode,
     });

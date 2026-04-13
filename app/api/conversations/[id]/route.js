@@ -5,9 +5,9 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { requireOwnerSession, unauthorizedResponse } from "@/lib/apiRouteUtils";
 
 /**
  * GET — public endpoint, no auth required.
@@ -42,9 +42,9 @@ export async function GET(req, { params }) {
  */
 export async function PATCH(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await requireOwnerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const { id } = params;

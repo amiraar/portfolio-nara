@@ -5,7 +5,7 @@
 
 "use client";
 
-import { Field, inputCls, textareaCls, Divider } from "./shared";
+import { Field, inputCls, textareaCls, Divider } from "./primitives";
 
 export default function EducationEditor({ data, onChange }) {
   function set(k, v) { onChange({ ...data, [k]: v }); }

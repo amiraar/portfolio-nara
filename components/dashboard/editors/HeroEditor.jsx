@@ -5,7 +5,7 @@
 
 "use client";
 
-import { Field, inputCls, textareaCls } from "./shared";
+import { Field, inputCls, textareaCls } from "./primitives";
 
 export default function HeroEditor({ data, onChange }) {
   function set(k, v) { onChange({ ...data, [k]: v }); }

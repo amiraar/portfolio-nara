@@ -21,6 +21,11 @@ function sanitizeText(str) {
   return str.replace(/[<>"'`]/g, "");
 }
 
+/**
+ * Upsert a visitor identity and return/seed their active conversation.
+ * @param {Request} req
+ * @returns {Promise<import("next/server").NextResponse>}
+ */
 export async function POST(req) {
   try {
     // --- Rate limiting: 5 registrations per minute per IP ---
@@ -87,20 +92,14 @@ export async function POST(req) {
       },
     });
 
-    // Backfill token for visitors registered before this feature was added
+    // Backfill token only for legacy visitors created before token support.
     if (!visitor.token) {
-      visitor = await prisma.visitor.update({
+      const token = randomUUID();
+      await prisma.visitor.update({
         where: { id: visitor.id },
-        data: { token: randomUUID() },
-        include: {
-          conversations: {
-            where: { status: "active" },
-            orderBy: { updatedAt: "desc" },
-            take: 1,
-            include: { messages: { orderBy: { timestamp: "asc" } } },
-          },
-        },
+        data: { token },
       });
+      visitor = { ...visitor, token };
     }
 
     // If no active conversation exists, create one

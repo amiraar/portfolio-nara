@@ -5,32 +5,21 @@
 
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { usePortfolioContent } from "@/lib/usePortfolioContent";
 import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
+import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
+import PortfolioSectionHeader from "@/components/shared/PortfolioSectionHeader";
 
 export default function Contact() {
   const sectionRef = useRef(null);
   const { data } = usePortfolioContent("education", PORTFOLIO_DEFAULTS.education);
-
-  useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) el.classList.add("revealed"); },
-      { threshold: 0.1 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  useRevealOnScroll(sectionRef, 0.1);
 
   return (
     <section id="contact" className="pb-28 max-w-5xl mx-auto px-6 lg:px-8">
       <div ref={sectionRef} className="section-reveal">
-        <div className="flex items-center gap-4 mb-14">
-          <p className="font-mono text-accent text-xs tracking-widest uppercase">06 — Contact</p>
-          <div className="gold-divider flex-1 max-w-[60px]" />
-        </div>
+        <PortfolioSectionHeader number="06" title="Contact" />
 
         <div className="max-w-md p-6 rounded-xl border border-border bg-surface/60">
           <p className="font-mono text-xs text-accent mb-4 tracking-wider uppercase">Get in Touch</p>

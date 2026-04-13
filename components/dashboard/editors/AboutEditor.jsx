@@ -5,7 +5,7 @@
 
 "use client";
 
-import { Field, inputCls, textareaCls, TagInput, BtnDanger, Divider } from "./shared";
+import { Field, inputCls, textareaCls, TagInput, BtnDanger, Divider } from "./primitives";
 
 export default function AboutEditor({ data, onChange }) {
   function set(k, v) { onChange({ ...data, [k]: v }); }

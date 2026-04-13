@@ -5,6 +5,11 @@
 import "./globals.css";
 import NextAuthSessionProvider from "@/components/SessionProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { validateOpenAIConfig } from "@/lib/openai";
+
+if (process.env.NODE_ENV !== "test") {
+  validateOpenAIConfig();
+}
 
 /** @type {import('next').Metadata} */
 export const metadata = {

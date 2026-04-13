@@ -5,77 +5,22 @@
 
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { usePortfolioContent } from "@/lib/usePortfolioContent";
 import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
-
-const DEFAULT_EXPERIENCE = [
-  {
-    company: "SoftwareSeni",
-    role: "Software Developer",
-    period: "Aug 2025 – Present",
-    description:
-      "Built the MVP of QuickCue — an AI-driven one-page profile generation platform with shareable slug-based URLs and core API infrastructure. Developed Racker — an end-to-end reimbursement and request workflow system with multi-step approvals, AWS S3 file handling, and in-app + email notifications.",
-    tags: ["Laravel", "PostgreSQL", "AWS S3", "OpenAI API", "REST API"],
-    current: true,
-  },
-  {
-    company: "SoftwareSeni",
-    role: "Software Training (Bootcamp)",
-    period: "May 2025 – Aug 2025",
-    description:
-      "Completed intensive bootcamp at SoftwareSeni. Built CPTool — a comprehensive Laravel admin system featuring Google OAuth integration, Role-Based Access Control (RBAC), server-side DataTables for skills and client management.",
-    tags: ["Laravel", "Google OAuth", "RBAC", "DataTables", "MySQL"],
-  },
-  {
-    company: "RSU Mitra Paramedika",
-    role: "UI/UX Designer",
-    period: "Aug 2023 – Nov 2023",
-    description:
-      "Designed hospital system interfaces resulting in +25% user satisfaction score. Conducted user research with 50 participants across clinical and administrative staff to inform wireframes and usability improvements.",
-    tags: ["Figma", "User Research", "Prototyping", "Healthcare UX"],
-  },
-  {
-    company: "Lazismu Yogyakarta",
-    role: "Project Manager",
-    period: "May 2023 – Aug 2023",
-    description:
-      "Led project coordination for nonprofit initiatives. Achieved +20% improvement in project delivery efficiency and reduced project delays by 15% through improved planning and stakeholder communication.",
-    tags: ["Project Management", "Stakeholder Communication", "Agile"],
-  },
-  {
-    company: "Ahmad Dahlan University",
-    role: "Lab Assistant",
-    period: "Sep 2022 – Jul 2024",
-    description:
-      "Assisted in teaching Statistics, Algorithm Strategy, Deep Learning, and Data Visualization courses. Supported 30+ students per course through hands-on lab sessions and individual tutoring.",
-    tags: ["Statistics", "Deep Learning", "Data Visualization", "Mentoring"],
-  },
-];
+import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
+import PortfolioSectionHeader from "@/components/shared/PortfolioSectionHeader";
 
 export default function Experience() {
   const sectionRef = useRef(null);
   const { data: items } = usePortfolioContent("experience", PORTFOLIO_DEFAULTS.experience);
-
-  useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) el.classList.add("revealed"); },
-      { threshold: 0.08 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  useRevealOnScroll(sectionRef, 0.08);
 
   return (
     <section id="experience" className="py-28 bg-surface/40">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
         <div ref={sectionRef} className="section-reveal">
-          <div className="flex items-center gap-4 mb-14">
-            <p className="font-mono text-accent text-xs tracking-widest uppercase">02 — Experience</p>
-            <div className="gold-divider flex-1 max-w-[60px]" />
-          </div>
+          <PortfolioSectionHeader number="02" title="Experience" />
 
           <div className="relative">
             {/* Timeline line */}

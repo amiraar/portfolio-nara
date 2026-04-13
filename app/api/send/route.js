@@ -5,16 +5,26 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
-import pusher from "@/lib/pusher";
+import { emitConversationEvent } from "@/lib/pusher";
+import {
+  findConversation,
+  requireOwnerSession,
+  touchConversation,
+  unauthorizedResponse,
+} from "@/lib/apiRouteUtils";
 
+/**
+ * Save an owner message and broadcast it to visitor + dashboard channels.
+ * @param {Request} req
+ * @returns {Promise<import("next/server").NextResponse>}
+ */
 export async function POST(req) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await requireOwnerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const body = await req.json();
@@ -28,9 +38,7 @@ export async function POST(req) {
     }
 
     // Verify conversation exists
-    const conversation = await prisma.conversation.findUnique({
-      where: { id: conversationId },
-    });
+    const conversation = await findConversation(conversationId);
 
     if (!conversation) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
@@ -46,17 +54,10 @@ export async function POST(req) {
     });
 
     // Update conversation timestamp
-    await prisma.conversation.update({
-      where: { id: conversationId },
-      data: { updatedAt: new Date() },
-    });
+    await touchConversation(conversationId);
 
     // Emit to both visitor conversation channel and dashboard channel
-    await pusher.trigger(`private-conversation-${conversationId}`, "new_message", {
-      conversationId,
-      message,
-    });
-    await pusher.trigger("private-dashboard", "new_message", {
+    await emitConversationEvent(conversationId, "new_message", {
       conversationId,
       message,
     });

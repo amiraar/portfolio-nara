@@ -6,7 +6,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Field, inputCls, TagInput, BtnDanger, BtnSecondary, Divider } from "./shared";
+import { Field, inputCls, TagInput, BtnDanger, BtnSecondary, Divider } from "./primitives";
 
 const LANGUAGE_LEVELS = [
   { label: "Native",             pct: 100 },
