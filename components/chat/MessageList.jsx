@@ -17,6 +17,37 @@ import { format } from "date-fns";
 export default function MessageList({ messages, isTyping }) {
   const bottomRef = useRef(null);
 
+  function getMessageTimeValue(message) {
+    if (!message?.timestamp) return Number.NaN;
+    const timeValue = new Date(message.timestamp).getTime();
+    return Number.isNaN(timeValue) ? Number.NaN : timeValue;
+  }
+
+  const orderedMessages = messages
+    .map((message, index) => ({ message, index }))
+    .sort((a, b) => {
+      const aTime = getMessageTimeValue(a.message);
+      const bTime = getMessageTimeValue(b.message);
+      const aHasValidTime = Number.isFinite(aTime);
+      const bHasValidTime = Number.isFinite(bTime);
+
+      if (aHasValidTime && bHasValidTime && aTime !== bTime) {
+        return aTime - bTime;
+      }
+
+      // For same timestamp, keep user message before assistant/owner.
+      const aRole = String(a.message?.role || "");
+      const bRole = String(b.message?.role || "");
+      if (aRole !== bRole) {
+        if (aRole === "user") return -1;
+        if (bRole === "user") return 1;
+      }
+
+      // Stable fallback order.
+      return a.index - b.index;
+    })
+    .map(({ message }) => message);
+
   function getMessageKey(message, index) {
     if (message?.id !== undefined && message?.id !== null && String(message.id).trim()) {
       return `id:${String(message.id)}`;
@@ -66,7 +97,7 @@ export default function MessageList({ messages, isTyping }) {
         </div>
       )}
 
-      {messages.map((msg, index) => (
+      {orderedMessages.map((msg, index) => (
         <MessageBubble key={getMessageKey(msg, index)} message={msg} />
       ))}
 
