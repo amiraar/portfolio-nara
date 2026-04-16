@@ -10,6 +10,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import prisma from "@/lib/prisma";
 import { getKaiaReply } from "@/lib/openai";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -23,62 +24,97 @@ const MAX_CONTENT_LENGTH = 1000;
 const AI_FALLBACK_MESSAGE =
   "Maaf, Kaia sedang tidak tersedia saat ini. Silakan hubungi Amirul langsung di amrlkurniawn19@gmail.com — ia akan segera membalas pesan Anda.";
 
+function getCorrelationId(req) {
+  const incoming = req.headers.get("x-correlation-id");
+  if (incoming && incoming.trim()) return incoming.trim();
+  return randomUUID();
+}
+
+function normalizeClientTempId(value) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  if (!normalized || normalized.length > 120) return null;
+  if (!/^[a-zA-Z0-9:_-]+$/.test(normalized)) return null;
+  return normalized;
+}
+
+function withCorrelation(response, correlationId) {
+  response.headers.set("X-Correlation-Id", correlationId);
+  return response;
+}
+
 /**
  * Persist a visitor chat message and optional AI reply.
  * @param {Request} req
  * @returns {Promise<import("next/server").NextResponse>}
  */
 export async function POST(req) {
+  const correlationId = getCorrelationId(req);
+  const startedAt = Date.now();
+
   try {
     const body = await req.json();
-    const { conversationId, content } = body;
+    const { conversationId, content, clientTempId: rawClientTempId } = body;
+    const clientTempId = normalizeClientTempId(rawClientTempId);
+
+    console.info("[chat] Incoming request", {
+      correlationId,
+      conversationId,
+      hasClientTempId: Boolean(clientTempId),
+    });
 
     if (!conversationId || !content?.trim()) {
-      return NextResponse.json(
+      return withCorrelation(NextResponse.json(
         { error: "conversationId and content are required" },
         { status: 400 }
-      );
+      ), correlationId);
     }
 
     // --- Verify visitor identity via HttpOnly cookie (not request body) ---
     const visitorToken = req.cookies.get("visitor-token")?.value;
+    console.info("[chat] Cookie validation", {
+      correlationId,
+      hasVisitorToken: Boolean(visitorToken),
+    });
+
     if (!visitorToken) {
-      return NextResponse.json(
+      return withCorrelation(NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
-      );
+      ), correlationId);
     }
 
     // Resolve visitor from the signed server-issued token
     const tokenOwner = await prisma.visitor.findUnique({ where: { token: visitorToken } });
+    console.info("[chat] Cookie owner lookup", {
+      correlationId,
+      resolved: Boolean(tokenOwner),
+      ownerId: tokenOwner?.id ?? null,
+    });
+
     if (!tokenOwner) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return withCorrelation(NextResponse.json({ error: "Unauthorized" }, { status: 401 }), correlationId);
     }
 
     // --- XSS sanitization + input length validation ---
     // Strip HTML-dangerous characters before storing or sending to OpenAI
     const trimmed = content.trim().replace(/[<>"'`]/g, "");
     if (trimmed.length === 0) {
-      return NextResponse.json({ error: "Message cannot be empty" }, { status: 400 });
+      return withCorrelation(NextResponse.json({ error: "Message cannot be empty" }, { status: 400 }), correlationId);
     }
     if (trimmed.length > MAX_CONTENT_LENGTH) {
-      return NextResponse.json(
+      return withCorrelation(NextResponse.json(
         { error: `Message too long. Maximum ${MAX_CONTENT_LENGTH} characters allowed.` },
         { status: 400 }
-      );
+      ), correlationId);
     }
 
     // --- Rate limiting ---
-    // Prefer conversationId as the rate-limit key (stable, visitor-specific).
-    // Fall back to forwarded IP if needed.
-    const rateLimitKey =
-      conversationId ||
-      req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
-      "unknown";
-
-    const { allowed, remaining, retryAfter } = checkRateLimit(rateLimitKey);
+    // Use visitor+conversation composite key to avoid collisions and false positives.
+    const rateLimitKey = `chat:${tokenOwner.id}:${conversationId}`;
+    const { allowed, retryAfter } = checkRateLimit(rateLimitKey, 10, 60, "chat");
     if (!allowed) {
-      return NextResponse.json(
+      return withCorrelation(NextResponse.json(
         {
           error: `Terlalu banyak pesan. Coba lagi dalam ${retryAfter} detik.`,
         },
@@ -90,7 +126,7 @@ export async function POST(req) {
             "X-RateLimit-Remaining": "0",
           },
         }
-      );
+      ), correlationId);
     }
 
     // Fetch conversation with the visitor's details
@@ -103,12 +139,28 @@ export async function POST(req) {
     });
 
     if (!conversation) {
-      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+      return withCorrelation(NextResponse.json({ error: "Conversation not found" }, { status: 404 }), correlationId);
     }
 
     // --- Ownership check: cookie-resolved visitor must own this conversation ---
     if (conversation.visitorId !== tokenOwner.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return withCorrelation(NextResponse.json({ error: "Forbidden" }, { status: 403 }), correlationId);
+    }
+
+    const emittedKeys = new Set();
+    async function emitOnce(emitKey, emitter) {
+      if (emittedKeys.has(emitKey)) {
+        console.warn("[chat] Duplicate emit blocked", {
+          correlationId,
+          conversationId,
+          emitKey,
+        });
+        return false;
+      }
+
+      emittedKeys.add(emitKey);
+      await emitter();
+      return true;
     }
 
     // Save the visitor's message
@@ -124,34 +176,58 @@ export async function POST(req) {
     await touchConversation(conversationId);
 
     // Notify dashboard of the new visitor message in realtime
-    await emitConversationEvent(conversationId, "new_message", {
-      conversationId,
-      message: userMessage,
-      visitor: conversation.visitor,
+    await emitOnce(`user:new_message:${userMessage.id}`, async () => {
+      const eventId = randomUUID();
+      await emitConversationEvent(conversationId, "new_message", {
+        correlationId,
+        eventId,
+        conversationId,
+        message: userMessage,
+        clientTempId,
+        visitor: conversation.visitor,
+      });
+      console.info("[chat] Realtime emitted", {
+        correlationId,
+        eventId,
+        type: "user:new_message",
+      });
     });
 
     // If mode is "human", do not call OpenAI — owner handles this
     if (conversation.mode === "human") {
-      return NextResponse.json({ message: userMessage, aiReply: null });
+      return withCorrelation(NextResponse.json({
+        correlationId,
+        message: userMessage,
+        aiReply: null,
+      }), correlationId);
     }
 
     // --- AI mode: call Kaia ---
 
     // Emit typing indicator to the visitor's conversation channel
-    await pusher.trigger(
-      `private-conversation-${conversationId}`,
-      "kaia_typing",
-      { conversationId }
-    );
+    const typingEventId = randomUUID();
+    await emitOnce(`assistant:typing:${conversationId}`, async () => {
+      await pusher.trigger(
+        `private-conversation-${conversationId}`,
+        "kaia_typing",
+        { correlationId, eventId: typingEventId, conversationId }
+      );
+      console.info("[chat] Realtime emitted", {
+        correlationId,
+        eventId: typingEventId,
+        type: "assistant:typing",
+      });
+    });
 
     // Build history (all previous messages, new one already in DB)
     const history = conversation.messages; // messages before the new one
 
     let replyText;
     try {
-      replyText = await getKaiaReply(history, trimmed);
+      replyText = await getKaiaReply(history, trimmed, { correlationId });
     } catch (aiError) {
       console.error("[Kaia fallback triggered]", {
+        correlationId,
         conversationId,
         model: process.env.OPENAI_MODEL ?? "unset",
         status: aiError?.status ?? aiError?.response?.status ?? "unknown",
@@ -175,14 +251,50 @@ export async function POST(req) {
     // arrives before the HTTP response, the client replaces the optimistic row
     // by optimistic id; once API data returns, duplicate-by-id guards keep the
     // final list stable without double-appending persisted messages.
-    await emitConversationEvent(conversationId, "new_message", {
+    let assistantRealtimeDelivered = true;
+    try {
+      await emitOnce(`assistant:new_message:${assistantMessage.id}`, async () => {
+        const eventId = randomUUID();
+        await emitConversationEvent(conversationId, "new_message", {
+          correlationId,
+          eventId,
+          conversationId,
+          message: assistantMessage,
+        });
+        console.info("[chat] Realtime emitted", {
+          correlationId,
+          eventId,
+          type: "assistant:new_message",
+        });
+      });
+    } catch (emitError) {
+      assistantRealtimeDelivered = false;
+      console.error("[chat] Assistant realtime emit failed", {
+        correlationId,
+        conversationId,
+        messageId: assistantMessage.id,
+        error: emitError?.message ?? String(emitError),
+      });
+    }
+
+    console.info("[chat] Request completed", {
+      correlationId,
       conversationId,
-      message: assistantMessage,
+      assistantRealtimeDelivered,
+      durationMs: Date.now() - startedAt,
     });
 
-    return NextResponse.json({ message: userMessage, aiReply: assistantMessage });
+    return withCorrelation(NextResponse.json({
+      correlationId,
+      message: userMessage,
+      aiReply: assistantMessage,
+      realtime: { assistantDelivered: assistantRealtimeDelivered },
+    }), correlationId);
   } catch (error) {
-    console.error("[POST /api/chat]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error("[POST /api/chat]", {
+      correlationId,
+      error: error?.message ?? String(error),
+    });
+    return withCorrelation(NextResponse.json({ error: "Internal server error" }, { status: 500 }), correlationId);
   }
 }

@@ -18,6 +18,81 @@ import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import { getPusherClient } from "@/lib/pusherClient";
 
+function createClientTempId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `tmp-${crypto.randomUUID()}`;
+  }
+  return `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function getStableMessageKey(message, clientTempId) {
+  const messageId = message?.id;
+  if (messageId !== undefined && messageId !== null && String(messageId).trim()) {
+    return `id:${String(messageId)}`;
+  }
+
+  const tempId =
+    clientTempId ||
+    message?.clientTempId ||
+    message?.tempId ||
+    null;
+
+  if (typeof tempId === "string" && tempId.trim()) {
+    return `temp:${tempId.trim()}`;
+  }
+
+  return null;
+}
+
+function mergeIncomingMessage(prev, incoming, clientTempId) {
+  if (!incoming || typeof incoming !== "object") return prev;
+
+  const incomingId = incoming?.id !== undefined && incoming?.id !== null
+    ? String(incoming.id)
+    : "";
+  const normalizedTempId =
+    typeof clientTempId === "string" && clientTempId.trim()
+      ? clientTempId.trim()
+      : typeof incoming?.clientTempId === "string" && incoming.clientTempId.trim()
+        ? incoming.clientTempId.trim()
+        : null;
+
+  let withoutOptimistic = prev;
+  if (normalizedTempId) {
+    withoutOptimistic = prev.filter((m) => {
+      const sameTemp =
+        (typeof m.clientTempId === "string" && m.clientTempId === normalizedTempId) ||
+        (typeof m.tempId === "string" && m.tempId === normalizedTempId) ||
+        String(m.id || "") === normalizedTempId;
+      return !sameTemp;
+    });
+  }
+
+  const normalizedIncoming = normalizedTempId
+    ? { ...incoming, clientTempId: normalizedTempId }
+    : incoming;
+
+  if (incomingId) {
+    const existingIndex = withoutOptimistic.findIndex((m) => String(m.id || "") === incomingId);
+    if (existingIndex >= 0) {
+      return withoutOptimistic.map((m, idx) => (idx === existingIndex ? { ...m, ...normalizedIncoming } : m));
+    }
+  }
+
+  if (normalizedTempId) {
+    const existingTempIndex = withoutOptimistic.findIndex(
+      (m) =>
+        (typeof m.clientTempId === "string" && m.clientTempId === normalizedTempId) ||
+        (typeof m.tempId === "string" && m.tempId === normalizedTempId)
+    );
+    if (existingTempIndex >= 0) {
+      return withoutOptimistic.map((m, idx) => (idx === existingTempIndex ? { ...m, ...normalizedIncoming } : m));
+    }
+  }
+
+  return [...withoutOptimistic, normalizedIncoming];
+}
+
 export default function ChatWidget() {
   /*
    * Valid widget transitions:
@@ -38,6 +113,7 @@ export default function ChatWidget() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const handleSendRef = useRef(null);
   const widgetStateRef = useRef(widgetState);
+  const seenEventKeysRef = useRef(new Set());
 
   // Show bubble after 3 seconds
   useEffect(() => {
@@ -110,29 +186,70 @@ export default function ChatWidget() {
     const channelName = `private-conversation-${conversation.id}`;
     const channel = pusher.subscribe(channelName);
 
-    function onNewMessage({ message }) {
+    function rememberEvent(eventKey) {
+      if (!eventKey) return false;
+      if (seenEventKeysRef.current.has(eventKey)) return true;
+
+      seenEventKeysRef.current.add(eventKey);
+      if (seenEventKeysRef.current.size > 400) {
+        const [firstKey] = seenEventKeysRef.current;
+        if (firstKey) seenEventKeysRef.current.delete(firstKey);
+      }
+      return false;
+    }
+
+    function onNewMessage({ message, clientTempId, eventId, correlationId }) {
+      const stableEventKey =
+        (typeof eventId === "string" && eventId.trim()) ||
+        getStableMessageKey(message, clientTempId);
+
+      if (rememberEvent(stableEventKey)) {
+        return;
+      }
+
       setMessages((prev) => {
-        // Avoid duplicates
-        if (prev.find((m) => m.id === message.id)) return prev;
-        return [...prev, message];
+        return mergeIncomingMessage(prev, message, clientTempId);
       });
       setIsTyping(false);
+
+      if (correlationId) {
+        console.info("[chatWidget] Realtime message received", {
+          correlationId,
+          eventId: eventId ?? null,
+          messageId: message?.id ?? null,
+          clientTempId: clientTempId ?? null,
+        });
+      }
+
       // Increment unread badge only when widget is closed
       if (widgetStateRef.current !== "open") {
         setUnreadCount((c) => c + 1);
       }
     }
 
-    function onKaiaTyping() {
+    function onKaiaTyping({ correlationId }) {
       setIsTyping(true);
+      if (correlationId) {
+        console.info("[chatWidget] Typing event received", { correlationId });
+      }
+    }
+
+    function onSubscriptionError(error) {
+      console.error("[chatWidget] Pusher subscription error", {
+        conversationId: conversation.id,
+        error,
+      });
+      setSendError("Realtime chat sedang bermasalah. Pesan tetap dikirim lewat API.");
     }
 
     channel.bind("new_message", onNewMessage);
     channel.bind("kaia_typing", onKaiaTyping);
+    channel.bind("pusher:subscription_error", onSubscriptionError);
 
     return () => {
       channel.unbind("new_message", onNewMessage);
       channel.unbind("kaia_typing", onKaiaTyping);
+      channel.unbind("pusher:subscription_error", onSubscriptionError);
       pusher.unsubscribe(channelName);
     };
   }, [conversation?.id]);
@@ -152,9 +269,61 @@ export default function ChatWidget() {
       setSendError(null);
       setSending(true);
 
+      async function refreshVisitorCookie() {
+        try {
+          const visitorPayload =
+            visitor?.name && visitor?.email
+              ? { name: visitor.name, email: visitor.email }
+              : (() => {
+                const stored = window.localStorage.getItem("nara_visitor");
+                if (!stored) return null;
+                const parsed = JSON.parse(stored);
+                const name = parsed?.visitor?.name;
+                const email = parsed?.visitor?.email;
+                if (!name || !email) return null;
+                return { name, email };
+              })();
+
+          if (!visitorPayload) return false;
+
+          const cookieRes = await fetch("/api/visitor", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(visitorPayload),
+          });
+
+          return cookieRes.ok;
+        } catch {
+          return false;
+        }
+      }
+
+      async function sendChatRequest(clientTempId, retriedAuth = false) {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            conversationId: conversation.id,
+            content,
+            clientTempId,
+          }),
+        });
+
+        if ((response.status === 401 || response.status === 403) && !retriedAuth) {
+          const refreshed = await refreshVisitorCookie();
+          if (refreshed) {
+            return sendChatRequest(clientTempId, true);
+          }
+        }
+
+        return response;
+      }
+
       // Optimistic UI: add visitor message immediately
+      const clientTempId = createClientTempId();
       const optimistic = {
-        id: `opt-${Date.now()}`,
+        id: clientTempId,
+        clientTempId,
         role: "user",
         content,
         timestamp: new Date().toISOString(),
@@ -162,47 +331,43 @@ export default function ChatWidget() {
       setMessages((prev) => [...prev, optimistic]);
 
       try {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ conversationId: conversation.id, content }),
-        });
+        const res = await sendChatRequest(clientTempId);
         const data = await res.json();
 
         if (!res.ok) {
           // Remove optimistic message and show error
-          setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+          setMessages((prev) => prev.filter((m) => String(m.id) !== clientTempId));
           setSendError(data.error ?? "Gagal mengirim pesan. Coba lagi.");
           return;
         }
 
-        if (data.message) {
-          // Reconcile optimistic + Pusher race safely:
-          // - remove optimistic row
-          // - upsert persisted user message by id
-          setMessages((prev) => {
-            const withoutOptimistic = prev.filter((m) => m.id !== optimistic.id);
-            const existingIndex = withoutOptimistic.findIndex((m) => m.id === data.message.id);
-
-            if (existingIndex >= 0) {
-              return withoutOptimistic.map((m) =>
-                m.id === data.message.id ? { ...m, ...data.message } : m
-              );
-            }
-
-            return [...withoutOptimistic, data.message];
+        if (data?.correlationId) {
+          console.info("[chatWidget] Chat request completed", {
+            correlationId: data.correlationId,
+            assistantDelivered: Boolean(data?.realtime?.assistantDelivered),
           });
         }
-        // aiReply arrives via Pusher ("new_message" event)
+
+        if (data.message) {
+          setMessages((prev) => {
+            return mergeIncomingMessage(prev, data.message, clientTempId);
+          });
+        }
+
+        // Fallback for missing/delayed Pusher assistant event.
+        if (data.aiReply) {
+          setMessages((prev) => mergeIncomingMessage(prev, data.aiReply, null));
+          setIsTyping(false);
+        }
       } catch (err) {
         console.error("Send error:", err);
-        setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+        setMessages((prev) => prev.filter((m) => String(m.id) !== clientTempId));
         setSendError("Gagal mengirim pesan. Periksa koneksi internet Anda.");
       } finally {
         setSending(false);
       }
     },
-    [conversation?.id, sending]
+    [conversation?.id, sending, visitor?.email, visitor?.name]
   );
 
   useEffect(() => {

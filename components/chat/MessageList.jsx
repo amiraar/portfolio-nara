@@ -17,6 +17,16 @@ import { format } from "date-fns";
 export default function MessageList({ messages, isTyping }) {
   const bottomRef = useRef(null);
 
+  function getMessageKey(message, index) {
+    if (message?.id !== undefined && message?.id !== null && String(message.id).trim()) {
+      return `id:${String(message.id)}`;
+    }
+    if (typeof message?.clientTempId === "string" && message.clientTempId.trim()) {
+      return `temp:${message.clientTempId.trim()}`;
+    }
+    return `fallback:${index}`;
+  }
+
   // Auto-scroll to bottom whenever messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -56,8 +66,8 @@ export default function MessageList({ messages, isTyping }) {
         </div>
       )}
 
-      {messages.map((msg) => (
-        <MessageBubble key={msg.id} message={msg} />
+      {messages.map((msg, index) => (
+        <MessageBubble key={getMessageKey(msg, index)} message={msg} />
       ))}
 
       {/* Typing indicator */}
