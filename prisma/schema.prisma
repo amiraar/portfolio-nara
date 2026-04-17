@@ -51,3 +51,15 @@ model PortfolioContent {
   data      Json
   updatedAt DateTime @updatedAt
 }
+
+/// Persistent rate-limit counters — replaces the unreliable in-memory store.
+/// key = "<scope>:<identifier>:<maxRequests>:<windowSec>"
+/// Atomic upsert via raw SQL ensures correctness across serverless instances.
+model RateLimitEntry {
+  key         String   @id
+  count       Int      @default(1)
+  windowStart DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("rate_limit_entries")
+}

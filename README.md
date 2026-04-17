@@ -30,7 +30,7 @@ DIRECT_URL=postgresql://user:pass@ep-xxx.neon.tech/neon?sslmode=require
 
 # Get free key at https://aistudio.google.com/apikey
 GOOGLE_AI_STUDIO_KEY=AQ...your-key
-OPENAI_MODEL=gemini-2.5-flash
+AI_MODEL=gemini-2.5-flash
 MAX_HISTORY=15
 KAIA_SYSTEM_PROMPT=your-single-line-prompt-here
 

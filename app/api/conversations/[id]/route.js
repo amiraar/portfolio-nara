@@ -11,9 +11,9 @@ import { requireOwnerSession, unauthorizedResponse } from "@/lib/apiRouteUtils";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 /**
- * GET — public endpoint, no auth required.
- * ConversationId is a CUID (hard to guess), so security-by-obscurity is acceptable here.
+ * GET — requires either an owner session OR a valid visitor-token cookie that owns the conversation.
  * Both the visitor (ChatWidget) and the owner (Dashboard) call this endpoint.
+ * The owner authenticates via NextAuth session; visitors authenticate via HttpOnly visitor-token cookie.
  */
 export async function GET(req, { params }) {
   try {
@@ -29,6 +29,25 @@ export async function GET(req, { params }) {
       );
     }
 
+    // --- Authentication: owner session OR visitor token ---
+    const session = await requireOwnerSession(authOptions);
+
+    let visitorOwnerId = null;
+    if (!session) {
+      // Not an owner — require a valid visitor-token cookie
+      const visitorToken = req.cookies.get("visitor-token")?.value;
+      if (!visitorToken) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      const tokenOwner = await prisma.visitor.findUnique({ where: { token: visitorToken } });
+      if (!tokenOwner) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      visitorOwnerId = tokenOwner.id;
+    }
+
     const conversation = await prisma.conversation.findUnique({
       where: { id },
       include: {
@@ -39,6 +58,11 @@ export async function GET(req, { params }) {
 
     if (!conversation) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+    }
+
+    // Visitors may only read their own conversation
+    if (visitorOwnerId !== null && conversation.visitorId !== visitorOwnerId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     return NextResponse.json({ conversation });

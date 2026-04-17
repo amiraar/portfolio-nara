@@ -1,18 +1,18 @@
 /**
  * app/api/chat/route.js — Handle inbound visitor messages.
- * POST { conversationId, content } → saves message, calls OpenAI if mode="ai"
+ * POST { conversationId, content } → saves message, calls Gemini if mode="ai"
  * Emits Pusher events for realtime delivery.
  *
  * Security:
  *  - Rate limit: 10 messages per minute per conversationId (fallback to IP).
  *  - Input validation: message must be 1–1000 characters.
- *  - Graceful OpenAI fallback: returns a helpful message if the AI is down.
+ *  - Graceful Gemini fallback: returns a helpful message if the AI is down.
  */
 
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import prisma from "@/lib/prisma";
-import { getKaiaReply } from "@/lib/openai";
+import { getKaiaReply } from "@/lib/gemini";
 import { checkMultiRateLimit } from "@/lib/rateLimit";
 import pusher, { emitConversationEvent } from "@/lib/pusher";
 import { touchConversation } from "@/lib/apiRouteUtils";
@@ -20,8 +20,9 @@ import { touchConversation } from "@/lib/apiRouteUtils";
 /** Maximum allowed message length (characters). */
 const MAX_CONTENT_LENGTH = 1000;
 
-/** Fallback reply shown to visitors when OpenAI is unavailable. */
+/** Fallback reply shown to visitors when Gemini is unavailable. */
 const AI_FALLBACK_MESSAGE =
+  process.env.AI_FALLBACK_MESSAGE ??
   "Maaf, Kaia sedang tidak tersedia saat ini. Silakan hubungi Amirul langsung di amrlkurniawn19@gmail.com — ia akan segera membalas pesan Anda.";
 
 function getCorrelationId(req) {
@@ -97,7 +98,7 @@ export async function POST(req) {
     }
 
     // --- XSS sanitization + input length validation ---
-    // Strip HTML-dangerous characters before storing or sending to OpenAI
+    // Strip HTML-dangerous characters before storing or sending to Gemini
     const trimmed = content.trim().replace(/[<>"'`]/g, "");
     if (trimmed.length === 0) {
       return withCorrelation(NextResponse.json({ error: "Message cannot be empty" }, { status: 400 }), correlationId);
@@ -201,7 +202,7 @@ export async function POST(req) {
       });
     });
 
-    // If mode is "human", do not call OpenAI — owner handles this
+    // If mode is "human", do not call Gemini — owner handles this
     if (conversation.mode === "human") {
       const res = NextResponse.json({ correlationId, message: userMessage, aiReply: null });
       res.headers.set("X-RateLimit-Remaining", String(remaining));
@@ -235,7 +236,7 @@ export async function POST(req) {
       console.error("[Kaia fallback triggered]", {
         correlationId,
         conversationId,
-        model: process.env.OPENAI_MODEL ?? "unset",
+        model: process.env.AI_MODEL ?? "unset",
         status: aiError?.status ?? aiError?.response?.status ?? "unknown",
         code: aiError?.code ?? "unknown",
         message: aiError?.message ?? String(aiError),
