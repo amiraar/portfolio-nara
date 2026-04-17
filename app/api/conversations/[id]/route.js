@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { requireOwnerSession, unauthorizedResponse } from "@/lib/apiRouteUtils";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 /**
  * GET — public endpoint, no auth required.
@@ -17,6 +18,16 @@ import { requireOwnerSession, unauthorizedResponse } from "@/lib/apiRouteUtils";
 export async function GET(req, { params }) {
   try {
     const { id } = params;
+
+    // Rate limit to prevent CUID enumeration brute-force.
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+    const { allowed, retryAfter } = checkRateLimit(`conv-get:${ip}`, 30, 60, "conv-get");
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      );
+    }
 
     const conversation = await prisma.conversation.findUnique({
       where: { id },
@@ -56,6 +67,11 @@ export async function PATCH(req, { params }) {
         { error: "status must be 'active' or 'resolved'" },
         { status: 400 }
       );
+    }
+
+    const existing = await prisma.conversation.findUnique({ where: { id }, select: { id: true } });
+    if (!existing) {
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
     const conversation = await prisma.conversation.update({

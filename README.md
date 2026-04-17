@@ -7,7 +7,7 @@ Personal portfolio website for **Mohammad Amirul Kurniawan Putranto** with an in
 ### Prerequisites
 - Node.js 18+
 - PostgreSQL (or Neon account)
-- OpenAI API key
+- Google AI Studio API key (free at [aistudio.google.com/apikey](https://aistudio.google.com/apikey))
 - Pusher Channels app
 
 ### Installation
@@ -28,9 +28,11 @@ Fill in `.env`:
 DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech/neon?sslmode=require&pgbouncer=true
 DIRECT_URL=postgresql://user:pass@ep-xxx.neon.tech/neon?sslmode=require
 
-OPENROUTER_API_KEY=sk-...
-OPENAI_MODEL=gpt-4.1-mini
+# Get free key at https://aistudio.google.com/apikey
+GOOGLE_AI_STUDIO_KEY=AQ...your-key
+OPENAI_MODEL=gemini-2.5-flash
 MAX_HISTORY=15
+KAIA_SYSTEM_PROMPT=your-single-line-prompt-here
 
 NEXTAUTH_SECRET=your-secret
 NEXTAUTH_URL=http://localhost:3000
@@ -84,9 +86,9 @@ Visitor Browser                Owner Browser
 └──────────────┬──────────────────────────┘
                │
      ┌─────────┼──────────┬───────────────┐
-     ▼         ▼          ▼               ▼
-Pusher Channels OpenAI API  Neon PostgreSQL
- (realtime)    (gpt-4.1-mini) (via Prisma ORM)
+     ▼         ▼              ▼               ▼
+Pusher Channels Google Gemini  Neon PostgreSQL
+ (realtime)   (AI Studio API) (via Prisma ORM)
 ```
 
 ---
@@ -99,7 +101,7 @@ Pusher Channels OpenAI API  Neon PostgreSQL
 | Dynamic content via CMS (all sections editable from dashboard) | ✅ |
 | Chat widget with bubble + tooltip | ✅ |
 | Visitor identification (name + Gmail) with localStorage session | ✅ |
-| Kaia AI replies via OpenAI | ✅ |
+| Kaia AI replies via Google Gemini (Google AI Studio) | ✅ |
 | Realtime messages via Pusher Channels | ✅ |
 | Typing indicator | ✅ |
 | Owner dashboard (protected) | ✅ |

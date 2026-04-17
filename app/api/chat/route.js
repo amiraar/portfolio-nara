@@ -13,7 +13,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import prisma from "@/lib/prisma";
 import { getKaiaReply } from "@/lib/openai";
-import { checkRateLimit } from "@/lib/rateLimit";
+import { checkMultiRateLimit } from "@/lib/rateLimit";
 import pusher, { emitConversationEvent } from "@/lib/pusher";
 import { touchConversation } from "@/lib/apiRouteUtils";
 
@@ -110,20 +110,28 @@ export async function POST(req) {
     }
 
     // --- Rate limiting ---
-    // Use visitor+conversation composite key to avoid collisions and false positives.
-    const rateLimitKey = `chat:${tokenOwner.id}:${conversationId}`;
-    const { allowed, retryAfter } = checkRateLimit(rateLimitKey, 10, 60, "chat");
+    // Keyed per-visitor globally (not per-conversation) to prevent limit bypass
+    // via multiple conversations. Limits are conservative to protect Gemini free
+    // tier quota (5 RPM / 20 RPD).
+    const rateLimitKey = `visitor:${tokenOwner.id}`;
+    const { allowed, remaining, retryAfter, limitedBy } = checkMultiRateLimit(rateLimitKey, [
+      { maxRequests: 4,  windowSec: 60,          scope: "chat:rpm" },  // 4/min  (Gemini free: 5 RPM)
+      { maxRequests: 15, windowSec: 24 * 60 * 60, scope: "chat:rpd" }, // 15/day (Gemini free: 20 RPD)
+    ]);
     if (!allowed) {
+      const isDaily = limitedBy === "chat:rpd";
+      const errorMsg = isDaily
+        ? `Batas pesan harian tercapai. Coba lagi besok.`
+        : `Terlalu banyak pesan. Coba lagi dalam ${retryAfter} detik.`;
       return withCorrelation(NextResponse.json(
-        {
-          error: `Terlalu banyak pesan. Coba lagi dalam ${retryAfter} detik.`,
-        },
+        { error: errorMsg },
         {
           status: 429,
           headers: {
             "Retry-After": String(retryAfter),
-            "X-RateLimit-Limit": "10",
+            "X-RateLimit-Limit": isDaily ? "15" : "4",
             "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Window": isDaily ? "day" : "minute",
           },
         }
       ), correlationId);
@@ -195,11 +203,9 @@ export async function POST(req) {
 
     // If mode is "human", do not call OpenAI — owner handles this
     if (conversation.mode === "human") {
-      return withCorrelation(NextResponse.json({
-        correlationId,
-        message: userMessage,
-        aiReply: null,
-      }), correlationId);
+      const res = NextResponse.json({ correlationId, message: userMessage, aiReply: null });
+      res.headers.set("X-RateLimit-Remaining", String(remaining));
+      return withCorrelation(res, correlationId);
     }
 
     // --- AI mode: call Kaia ---
@@ -284,12 +290,14 @@ export async function POST(req) {
       durationMs: Date.now() - startedAt,
     });
 
-    return withCorrelation(NextResponse.json({
+    const res = NextResponse.json({
       correlationId,
       message: userMessage,
       aiReply: assistantMessage,
       realtime: { assistantDelivered: assistantRealtimeDelivered },
-    }), correlationId);
+    });
+    res.headers.set("X-RateLimit-Remaining", String(remaining));
+    return withCorrelation(res, correlationId);
   } catch (error) {
     console.error("[POST /api/chat]", {
       correlationId,

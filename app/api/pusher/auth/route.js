@@ -24,7 +24,6 @@ export async function POST(req) {
     const form = await req.formData();
     const socketId = form.get("socket_id");
     const channelName = form.get("channel_name");
-    const visitorId = form.get("visitorId");
 
     if (typeof socketId !== "string" || typeof channelName !== "string") {
       return NextResponse.json(
@@ -48,7 +47,18 @@ export async function POST(req) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    if (typeof visitorId !== "string" || !visitorId) {
+    // Resolve visitor identity from the HttpOnly cookie — never trust client-supplied visitorId.
+    const visitorToken = req.cookies.get("visitor-token")?.value;
+    if (!visitorToken) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const tokenOwner = await prisma.visitor.findUnique({
+      where: { token: visitorToken },
+      select: { id: true },
+    });
+
+    if (!tokenOwner) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -57,7 +67,7 @@ export async function POST(req) {
       select: { visitorId: true },
     });
 
-    if (!conversation || conversation.visitorId !== visitorId) {
+    if (!conversation || conversation.visitorId !== tokenOwner.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

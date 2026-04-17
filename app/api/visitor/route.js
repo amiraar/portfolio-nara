@@ -67,8 +67,8 @@ export async function POST(req) {
     const safeName = sanitizeText(name.trim());
     const safeEmail = sanitizeText(email.trim().toLowerCase());
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Validate email format — stricter regex rejects obvious malformed emails.
+    const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(safeEmail)) {
       return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
     }

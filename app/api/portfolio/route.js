@@ -59,6 +59,16 @@ export async function PATCH(req) {
       );
     }
 
+    // Prevent excessively large payloads from bloating the database.
+    const MAX_DATA_SIZE = 50_000; // 50 KB
+    const dataSize = JSON.stringify(data).length;
+    if (dataSize > MAX_DATA_SIZE) {
+      return NextResponse.json(
+        { error: `Data payload too large. Maximum ${MAX_DATA_SIZE} characters.` },
+        { status: 413 }
+      );
+    }
+
     const content = await prisma.portfolioContent.upsert({
       where: { section },
       update: { data },

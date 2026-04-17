@@ -36,6 +36,14 @@ export async function PATCH(req) {
       );
     }
 
+    const existing = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { id: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+    }
+
     const conversation = await prisma.conversation.update({
       where: { id: conversationId },
       data: { mode },
