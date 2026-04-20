@@ -21,7 +21,7 @@ export async function GET(req, { params }) {
 
     // Rate limit to prevent CUID enumeration brute-force.
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
-    const { allowed, retryAfter } = checkRateLimit(`conv-get:${ip}`, 30, 60, "conv-get");
+    const { allowed, retryAfter } = await checkRateLimit(`conv-get:${ip}`, 30, 60, "conv-get");
     if (!allowed) {
       return NextResponse.json(
         { error: "Too many requests" },

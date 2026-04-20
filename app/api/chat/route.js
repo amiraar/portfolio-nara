@@ -115,7 +115,7 @@ export async function POST(req) {
     // via multiple conversations. Limits are conservative to protect Gemini free
     // tier quota (5 RPM / 20 RPD).
     const rateLimitKey = `visitor:${tokenOwner.id}`;
-    const { allowed, remaining, retryAfter, limitedBy } = checkMultiRateLimit(rateLimitKey, [
+    const { allowed, remaining, retryAfter, limitedBy } = await checkMultiRateLimit(rateLimitKey, [
       { maxRequests: 4,  windowSec: 60,          scope: "chat:rpm" },  // 4/min  (Gemini free: 5 RPM)
       { maxRequests: 15, windowSec: 24 * 60 * 60, scope: "chat:rpd" }, // 15/day (Gemini free: 20 RPD)
     ]);

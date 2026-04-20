@@ -31,7 +31,7 @@ export async function POST(req) {
     // --- Rate limiting: 5 registrations per minute per IP ---
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
-    const { allowed, retryAfter } = checkRateLimit(`visitor:${ip}`, 5, 60);
+    const { allowed, retryAfter } = await checkRateLimit(`visitor:${ip}`, 5, 60);
     if (!allowed) {
       return NextResponse.json(
         { error: `Terlalu banyak permintaan. Coba lagi dalam ${retryAfter} detik.` },
