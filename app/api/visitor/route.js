@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import prisma from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { getClientIP } from "@/lib/apiRouteUtils";
 
 const MAX_NAME_LENGTH = 100;
 const MAX_EMAIL_LENGTH = 200;
@@ -29,8 +30,7 @@ function sanitizeText(str) {
 export async function POST(req) {
   try {
     // --- Rate limiting: 5 registrations per minute per IP ---
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+    const ip = getClientIP(req);
     const { allowed, retryAfter } = await checkRateLimit(`visitor:${ip}`, 5, 60);
     if (!allowed) {
       return NextResponse.json(

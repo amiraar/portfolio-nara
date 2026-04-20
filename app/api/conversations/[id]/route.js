@@ -7,7 +7,7 @@
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
-import { requireOwnerSession, unauthorizedResponse } from "@/lib/apiRouteUtils";
+import { requireOwnerSession, unauthorizedResponse, getClientIP } from "@/lib/apiRouteUtils";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 /**
@@ -20,7 +20,7 @@ export async function GET(req, { params }) {
     const { id } = params;
 
     // Rate limit to prevent CUID enumeration brute-force.
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+    const ip = getClientIP(req);
     const { allowed, retryAfter } = await checkRateLimit(`conv-get:${ip}`, 30, 60, "conv-get");
     if (!allowed) {
       return NextResponse.json(

@@ -11,6 +11,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import pusher from "@/lib/pusher";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { getClientIP } from "@/lib/apiRouteUtils";
 
 const CONVERSATION_PREFIX = "private-conversation-";
 
@@ -21,6 +23,17 @@ function getConversationIdFromChannel(channelName) {
 
 export async function POST(req) {
   try {
+    // Rate limit: 20 auth attempts per minute per IP.
+    // Pusher auth is cheap to probe — this blocks automated channel scanning.
+    const ip = getClientIP(req);
+    const { allowed, retryAfter } = await checkRateLimit(ip, 20, 60, "pusher-auth");
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      );
+    }
+
     const form = await req.formData();
     const socketId = form.get("socket_id");
     const channelName = form.get("channel_name");

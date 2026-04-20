@@ -26,8 +26,8 @@ const AI_FALLBACK_MESSAGE =
   "Maaf, Kaia sedang tidak tersedia saat ini. Silakan hubungi Amirul langsung di amrlkurniawn19@gmail.com — ia akan segera membalas pesan Anda.";
 
 function getCorrelationId(req) {
-  const incoming = req.headers.get("x-correlation-id");
-  if (incoming && incoming.trim()) return incoming.trim();
+  // Always generate server-side — never trust the client-supplied header for
+  // logging integrity. Ignoring it prevents log injection via newlines/ANSI codes.
   return randomUUID();
 }
 
@@ -147,13 +147,10 @@ export async function POST(req) {
       },
     });
 
-    if (!conversation) {
+    // --- Ownership check: return 404 whether the conversation is missing or not owned ---
+    // Responding with 403 on ownership failure leaks that the ID exists (enumeration).
+    if (!conversation || conversation.visitorId !== tokenOwner.id) {
       return withCorrelation(NextResponse.json({ error: "Conversation not found" }, { status: 404 }), correlationId);
-    }
-
-    // --- Ownership check: cookie-resolved visitor must own this conversation ---
-    if (conversation.visitorId !== tokenOwner.id) {
-      return withCorrelation(NextResponse.json({ error: "Forbidden" }, { status: 403 }), correlationId);
     }
 
     const emittedKeys = new Set();
