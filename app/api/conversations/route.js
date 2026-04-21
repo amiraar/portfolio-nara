@@ -51,7 +51,6 @@ export async function GET(req) {
           orderBy: { timestamp: "desc" },
           take: 1, // Latest message preview
         },
-        _count: false,
       },
     });
 
@@ -65,8 +64,8 @@ export async function GET(req) {
             SELECT
               m."conversationId",
               COUNT(*)::int AS "unreadCount"
-            FROM messages m
-            JOIN conversations c ON c.id = m."conversationId"
+            FROM "Message" m
+            JOIN "Conversation" c ON c.id = m."conversationId"
             WHERE
               m."conversationId" = ANY(${conversationIds})
               AND m.role = 'user'
