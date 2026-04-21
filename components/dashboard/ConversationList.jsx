@@ -58,11 +58,18 @@ export default function ConversationList({ conversations, selectedId, onSelect }
                   </span>
                 )}
               </div>
-              <span className="font-mono text-[10px] text-text-muted flex-shrink-0">
-                {conv.updatedAt
-                  ? formatDistanceToNow(new Date(conv.updatedAt), { addSuffix: true })
-                  : ""}
-              </span>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {conv.unreadCount > 0 && (
+                  <span className="font-mono text-[9px] bg-accent text-background px-1.5 py-0.5 rounded-full leading-none">
+                    {conv.unreadCount}
+                  </span>
+                )}
+                <span className="font-mono text-[10px] text-text-muted">
+                  {conv.updatedAt
+                    ? formatDistanceToNow(new Date(conv.updatedAt), { addSuffix: true })
+                    : ""}
+                </span>
+              </div>
             </div>
 
             <p className="text-xs text-text-muted truncate mb-2">

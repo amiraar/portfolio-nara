@@ -5,10 +5,16 @@
 import "./globals.css";
 import NextAuthSessionProvider from "@/components/SessionProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { validateOpenAIConfig } from "@/lib/openai";
+import { validateGeminiConfig } from "@/lib/gemini";
 
 if (process.env.NODE_ENV !== "test") {
-  validateOpenAIConfig();
+  validateGeminiConfig();
+  if (!process.env.NEXTAUTH_SECRET) {
+    throw new Error(
+      "[auth] NEXTAUTH_SECRET environment variable is not set. " +
+      "Set it in your .env file to a long random string."
+    );
+  }
 }
 
 /** @type {import('next').Metadata} */

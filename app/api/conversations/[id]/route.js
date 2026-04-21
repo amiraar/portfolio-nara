@@ -65,6 +65,14 @@ export async function GET(req, { params }) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // If the owner is viewing, update ownerLastReadAt to mark messages as read.
+    // Fire-and-forget — we don't await to avoid adding latency to the response.
+    if (visitorOwnerId === null) {
+      prisma.conversation
+        .update({ where: { id }, data: { ownerLastReadAt: new Date() } })
+        .catch((err) => console.warn("[conv] ownerLastReadAt update failed", err));
+    }
+
     return NextResponse.json({ conversation });
   } catch (error) {
     console.error("[GET /api/conversations/:id]", error);

@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { clsx } from "clsx";
 import ConversationList from "@/components/dashboard/ConversationList";
@@ -36,22 +36,53 @@ export default function DashboardPage() {
   const [convFilter, setConvFilter] = useState("active"); // "active" | "all"
   const [analytics, setAnalytics] = useState(null);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [nextCursor, setNextCursor] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const searchDebounceRef = useRef(null);
 
   // Initial load + polling (only when session is confirmed by the client)
 
-  /** Fetch all conversations from the server */
-  const fetchConversations = useCallback(async () => {
+  /** Fetch the first page of conversations (optionally filtered by search). */
+  const fetchConversations = useCallback(async (q = "") => {
     try {
-      const res = await fetch("/api/conversations");
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+      const res = await fetch(`/api/conversations${params.size ? `?${params}` : ""}`);
       const data = await res.json();
       if (data.conversations) {
         setConversations(data.conversations);
+        setNextCursor(data.nextCursor ?? null);
         setLastFetch(new Date());
       }
     } catch (err) {
       console.error("Fetch conversations error:", err);
     }
   }, []);
+
+  /** Append the next page of conversations (load more). */
+  const fetchMoreConversations = useCallback(async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const params = new URLSearchParams({ cursor: nextCursor });
+      if (searchQuery) params.set("q", searchQuery);
+      const res = await fetch(`/api/conversations?${params}`);
+      const data = await res.json();
+      if (data.conversations) {
+        setConversations((prev) => {
+          const existingIds = new Set(prev.map((c) => c.id));
+          const fresh = data.conversations.filter((c) => !existingIds.has(c.id));
+          return [...prev, ...fresh];
+        });
+        setNextCursor(data.nextCursor ?? null);
+      }
+    } catch (err) {
+      console.error("Load more conversations error:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [nextCursor, loadingMore, searchQuery]);
 
   /** Fetch aggregate analytics stats */
   const fetchAnalytics = useCallback(async () => {
@@ -81,17 +112,20 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Initial load + polling
+  // Initial load + polling — does not pass searchQuery so polling always refreshes
+  // the first page.  Search results are only live while the user types.
   useEffect(() => {
     if (status !== "authenticated") return;
-    fetchConversations();
+    fetchConversations(searchQuery);
     fetchAnalytics();
     const interval = setInterval(() => {
-      fetchConversations();
+      // Only poll if no active search (avoid overwriting search results mid-type)
+      if (!searchQuery) fetchConversations();
       fetchAnalytics();
     }, POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, [status, fetchConversations, fetchAnalytics]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, fetchAnalytics]); // intentionally excludes fetchConversations + searchQuery
 
   // Load messages when conversation selected
   useEffect(() => {
@@ -199,6 +233,11 @@ export default function DashboardPage() {
     setSelectedId(conv.id);
     setNewCount(0);
     setMobileView("detail"); // switch to detail on mobile
+    // Optimistically clear the unread badge in local state; the API will update
+    // ownerLastReadAt in the background via loadConversation → GET /api/conversations/:id
+    setConversations((prev) =>
+      prev.map((c) => (c.id === conv.id ? { ...c, unreadCount: 0 } : c))
+    );
   }
 
   function handleBackToList() {
@@ -350,6 +389,26 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Search input */}
+          <div className="px-4 py-2.5 border-b border-border flex-shrink-0">
+            <input
+              type="text"
+              placeholder="Search by name or email…"
+              value={searchQuery}
+              onChange={(e) => {
+                const q = e.target.value;
+                setSearchQuery(q);
+                // Debounce: wait 300ms after the user stops typing before fetching
+                clearTimeout(searchDebounceRef.current);
+                searchDebounceRef.current = setTimeout(() => {
+                  setNextCursor(null);
+                  fetchConversations(q);
+                }, 300);
+              }}
+              className="w-full font-mono text-xs bg-surface/60 border border-border rounded px-2.5 py-1.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/50 transition-colors"
+            />
+          </div>
+
           {/* Filter + count row */}
           <div className="px-4 py-2.5 border-b border-border flex-shrink-0 flex items-center justify-between gap-2">
             <p className="font-mono text-xs text-text-muted">
@@ -385,6 +444,18 @@ export default function DashboardPage() {
             selectedId={selectedId}
             onSelect={handleSelect}
           />
+          {/* Load more button — only shown when a next page is available */}
+          {nextCursor && !searchQuery && (
+            <div className="flex-shrink-0 px-4 py-2.5 border-t border-border">
+              <button
+                onClick={fetchMoreConversations}
+                disabled={loadingMore}
+                className="w-full font-mono text-xs text-text-muted hover:text-text-primary border border-border rounded px-3 py-1.5 transition-colors disabled:opacity-50"
+              >
+                {loadingMore ? "Loading…" : "Load more"}
+              </button>
+            </div>
+          )}
         </aside>
 
         {/* Detail panel — always visible on desktop; visible on mobile only in detail view */}

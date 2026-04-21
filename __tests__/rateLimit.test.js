@@ -16,8 +16,10 @@ beforeEach(() => {
 });
 
 // Helper: make prisma.$queryRaw return a single row as if the DB responded.
+// The SQL RETURNING clause uses quoted "windowStart" (camelCase) — Prisma passes
+// it through as-is, so the key must match the column alias in atomicIncrement.
 function mockDbRow(count, windowStart = new Date()) {
-  prisma.$queryRaw.mockResolvedValue([{ count: BigInt(count), window_start: windowStart }]);
+  prisma.$queryRaw.mockResolvedValue([{ count: BigInt(count), windowStart }]);
 }
 
 // ─── checkRateLimit ───────────────────────────────────────────────────────────
@@ -98,8 +100,8 @@ describe("checkRateLimit", () => {
 describe("checkMultiRateLimit", () => {
   it("allows when all windows pass", async () => {
     prisma.$queryRaw
-      .mockResolvedValueOnce([{ count: BigInt(1), window_start: new Date() }]) // rpm
-      .mockResolvedValueOnce([{ count: BigInt(1), window_start: new Date() }]); // rpd
+      .mockResolvedValueOnce([{ count: BigInt(1), windowStart: new Date() }]) // rpm
+      .mockResolvedValueOnce([{ count: BigInt(1), windowStart: new Date() }]); // rpd
 
     const result = await checkMultiRateLimit("visitor:xyz", [
       { maxRequests: 4,  windowSec: 60,          scope: "chat:rpm" },
@@ -114,8 +116,8 @@ describe("checkMultiRateLimit", () => {
   it("blocks and identifies the limiting scope (rpm)", async () => {
     const windowStart = new Date(Date.now() - 5_000);
     prisma.$queryRaw
-      .mockResolvedValueOnce([{ count: BigInt(5), window_start: windowStart }]) // rpm: over limit of 4
-      .mockResolvedValueOnce([{ count: BigInt(1), window_start: new Date() }]); // rpd: fine
+      .mockResolvedValueOnce([{ count: BigInt(5), windowStart: windowStart }]) // rpm: over limit of 4
+      .mockResolvedValueOnce([{ count: BigInt(1), windowStart: new Date() }]); // rpd: fine
 
     const result = await checkMultiRateLimit("visitor:xyz", [
       { maxRequests: 4,  windowSec: 60,          scope: "chat:rpm" },
@@ -131,8 +133,8 @@ describe("checkMultiRateLimit", () => {
   it("blocks and identifies the limiting scope (rpd)", async () => {
     const oldWindowStart = new Date(Date.now() - 23 * 60 * 60 * 1000); // 23 h ago
     prisma.$queryRaw
-      .mockResolvedValueOnce([{ count: BigInt(1), window_start: new Date() }]) // rpm: fine
-      .mockResolvedValueOnce([{ count: BigInt(16), window_start: oldWindowStart }]); // rpd: over limit
+      .mockResolvedValueOnce([{ count: BigInt(1), windowStart: new Date() }]) // rpm: fine
+      .mockResolvedValueOnce([{ count: BigInt(16), windowStart: oldWindowStart }]); // rpd: over limit
 
     const result = await checkMultiRateLimit("visitor:xyz", [
       { maxRequests: 4,  windowSec: 60,          scope: "chat:rpm" },
@@ -147,8 +149,8 @@ describe("checkMultiRateLimit", () => {
     const rpmWindowStart = new Date(Date.now() - 10_000);  // 10 s into 60 s window → ~50 s left
     const rpdWindowStart = new Date(Date.now() - 3600_000); // 1 h into 24 h window → ~23 h left
     prisma.$queryRaw
-      .mockResolvedValueOnce([{ count: BigInt(5), window_start: rpmWindowStart }]) // rpm blocked
-      .mockResolvedValueOnce([{ count: BigInt(16), window_start: rpdWindowStart }]); // rpd blocked
+      .mockResolvedValueOnce([{ count: BigInt(5), windowStart: rpmWindowStart }]) // rpm blocked
+      .mockResolvedValueOnce([{ count: BigInt(16), windowStart: rpdWindowStart }]); // rpd blocked
 
     const result = await checkMultiRateLimit("visitor:xyz", [
       { maxRequests: 4,  windowSec: 60,          scope: "chat:rpm" },
@@ -163,8 +165,8 @@ describe("checkMultiRateLimit", () => {
 
   it("runs all window checks in parallel (both DB calls happen)", async () => {
     prisma.$queryRaw
-      .mockResolvedValueOnce([{ count: BigInt(2), window_start: new Date() }])
-      .mockResolvedValueOnce([{ count: BigInt(5), window_start: new Date() }]);
+      .mockResolvedValueOnce([{ count: BigInt(2), windowStart: new Date() }])
+      .mockResolvedValueOnce([{ count: BigInt(5), windowStart: new Date() }]);
 
     await checkMultiRateLimit("visitor:xyz", [
       { maxRequests: 4,  windowSec: 60,          scope: "chat:rpm" },
@@ -176,8 +178,8 @@ describe("checkMultiRateLimit", () => {
 
   it("remaining reflects the minimum across all passing windows", async () => {
     prisma.$queryRaw
-      .mockResolvedValueOnce([{ count: BigInt(3), window_start: new Date() }]) // rpm: 4-3=1 remaining
-      .mockResolvedValueOnce([{ count: BigInt(2), window_start: new Date() }]); // rpd: 15-2=13 remaining
+      .mockResolvedValueOnce([{ count: BigInt(3), windowStart: new Date() }]) // rpm: 4-3=1 remaining
+      .mockResolvedValueOnce([{ count: BigInt(2), windowStart: new Date() }]); // rpd: 15-2=13 remaining
 
     const result = await checkMultiRateLimit("visitor:xyz", [
       { maxRequests: 4,  windowSec: 60,          scope: "chat:rpm" },

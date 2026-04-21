@@ -25,6 +25,10 @@ function createClientTempId() {
   return `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+// Monotonically-increasing counter for ordering optimistic messages when
+// their timestamp equals or is close to a server response timestamp.
+let _insertOrderCounter = 0;
+
 function getStableMessageKey(message, clientTempId) {
   const messageId = message?.id;
   if (messageId !== undefined && messageId !== null && String(messageId).trim()) {
@@ -114,6 +118,8 @@ export default function ChatWidget() {
   const handleSendRef = useRef(null);
   const widgetStateRef = useRef(widgetState);
   const seenEventKeysRef = useRef(new Set());
+  // Cleared when a new_message arrives; auto-expires after 15s to avoid stuck indicators.
+  const typingTimeoutRef = useRef(null);
 
   // Show bubble after 3 seconds
   useEffect(() => {
@@ -149,32 +155,44 @@ export default function ChatWidget() {
   useEffect(() => {
     const stored = localStorage.getItem("nara_visitor");
     if (stored) {
-      try {
-        const { visitor: v, conversationId } = JSON.parse(stored);
-        setVisitor(v);
-        setHasSession(true);
-        // Re-issue the HttpOnly visitor-token cookie in case it expired or was cleared.
-        // The /api/visitor upsert is idempotent — safe to call on every return visit.
-        if (v?.email && v?.name) {
-          fetch("/api/visitor", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: v.name, email: v.email }),
-          }).catch(() => {});
-        }
-        // Load conversation from server
-        fetch(`/api/conversations/${conversationId}`)
-          .then((r) => r.json())
-          .then(({ conversation: c }) => {
+      (async () => {
+        try {
+          const { visitor: v, conversationId } = JSON.parse(stored);
+          setVisitor(v);
+          setHasSession(true);
+
+          // Await cookie re-issue before fetching the conversation — the
+          // conversation endpoint requires the HttpOnly visitor-token cookie.
+          // If the cookie was cleared (different device, cleared browser data),
+          // the fetch below would return 401 without this step.
+          if (v?.email && v?.name) {
+            try {
+              await fetch("/api/visitor", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: v.name, email: v.email }),
+              });
+            } catch {
+              // Cookie refresh failed — best-effort; the conversation fetch
+              // may still succeed if the cookie is present.
+            }
+          }
+
+          // Load conversation from server (cookie is now set)
+          try {
+            const r = await fetch(`/api/conversations/${conversationId}`);
+            const { conversation: c } = await r.json();
             if (c) {
               setConversation(c);
               setMessages(c.messages || []);
             }
-          })
-          .catch(console.error);
-      } catch {
-        localStorage.removeItem("nara_visitor");
-      }
+          } catch (err) {
+            console.error(err);
+          }
+        } catch {
+          localStorage.removeItem("nara_visitor");
+        }
+      })();
     }
   }, []);
 
@@ -210,6 +228,7 @@ export default function ChatWidget() {
       setMessages((prev) => {
         return mergeIncomingMessage(prev, message, clientTempId);
       });
+      clearTimeout(typingTimeoutRef.current);
       setIsTyping(false);
 
       if (correlationId) {
@@ -228,7 +247,10 @@ export default function ChatWidget() {
     }
 
     function onKaiaTyping({ correlationId }) {
+      clearTimeout(typingTimeoutRef.current);
       setIsTyping(true);
+      // Auto-clear after 15 s in case the follow-up new_message never arrives
+      typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 15_000);
       if (correlationId) {
         console.info("[chatWidget] Typing event received", { correlationId });
       }
@@ -251,6 +273,7 @@ export default function ChatWidget() {
       channel.unbind("kaia_typing", onKaiaTyping);
       channel.unbind("pusher:subscription_error", onSubscriptionError);
       pusher.unsubscribe(channelName);
+      clearTimeout(typingTimeoutRef.current);
     };
   }, [conversation?.id]);
 
@@ -327,6 +350,7 @@ export default function ChatWidget() {
         role: "user",
         content,
         timestamp: new Date().toISOString(),
+        _insertOrder: ++_insertOrderCounter,
       };
       setMessages((prev) => [...prev, optimistic]);
 

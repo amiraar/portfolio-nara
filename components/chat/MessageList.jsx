@@ -35,6 +35,17 @@ export default function MessageList({ messages, isTyping }) {
         return aTime - bTime;
       }
 
+      // For same timestamp: if one is an optimistic message with _insertOrder, use it.
+      // This prevents clock-skew from reordering a just-sent message behind its
+      // server-echoed confirmation when both carry the same millisecond timestamp.
+      const aOrder = a.message?._insertOrder;
+      const bOrder = b.message?._insertOrder;
+      if (typeof aOrder === "number" && typeof bOrder === "number") {
+        return aOrder - bOrder;
+      }
+      if (typeof aOrder === "number") return 1;  // optimistic messages go last in ties
+      if (typeof bOrder === "number") return -1;
+
       // For same timestamp, keep user message before assistant/owner.
       const aRole = String(a.message?.role || "");
       const bRole = String(b.message?.role || "");

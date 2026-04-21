@@ -29,6 +29,9 @@ model Conversation {
   status    String    @default("active")
   /// ai | human
   mode      String    @default("ai")
+  /// Timestamp of the last time the owner viewed this conversation.
+  /// Used to compute the unread message count for the dashboard.
+  ownerLastReadAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   messages  Message[]
