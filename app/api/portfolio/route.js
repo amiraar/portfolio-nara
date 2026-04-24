@@ -51,7 +51,7 @@ export async function PATCH(req) {
       );
     }
 
-    const valid = ["hero", "about", "experience", "projects", "skills", "education"];
+    const valid = ["hero", "about", "experience", "projects", "skills", "education", "kaia_config"];
     if (!valid.includes(section)) {
       return NextResponse.json(
         { error: `section must be one of: ${valid.join(", ")}` },

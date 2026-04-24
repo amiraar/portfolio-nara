@@ -15,16 +15,18 @@ import ExperienceEditor from "./editors/ExperienceEditor";
 import ProjectsEditor from "./editors/ProjectsEditor";
 import SkillsEditor from "./editors/SkillsEditor";
 import EducationEditor from "./editors/EducationEditor";
+import KaiaConfigEditor from "./editors/KaiaConfigEditor";
 
 const DEFAULTS = PORTFOLIO_DEFAULTS;
 
 const SECTIONS = [
-  { key: "hero",       label: "Hero"       },
-  { key: "about",      label: "About"      },
-  { key: "experience", label: "Experience" },
-  { key: "projects",   label: "Projects"   },
-  { key: "skills",     label: "Skills"     },
-  { key: "education",  label: "Education"  },
+  { key: "hero",        label: "Hero"       },
+  { key: "about",       label: "About"      },
+  { key: "experience",  label: "Experience" },
+  { key: "projects",    label: "Projects"   },
+  { key: "skills",      label: "Skills"     },
+  { key: "education",   label: "Education"  },
+  { key: "kaia_config", label: "Kaia AI"    },
 ];
 
 export default function ContentEditor() {
@@ -213,12 +215,13 @@ export default function ContentEditor() {
           </div>
         ) : data ? (
           <>
-            {activeSection === "hero"       && <HeroEditor       data={data} onChange={handleChange} />}
-            {activeSection === "about"      && <AboutEditor      data={data} onChange={handleChange} />}
-            {activeSection === "experience" && <ExperienceEditor  data={data} onChange={handleChange} />}
-            {activeSection === "projects"   && <ProjectsEditor    data={data} onChange={handleChange} />}
-            {activeSection === "skills"     && <SkillsEditor      data={data} onChange={handleChange} />}
-            {activeSection === "education"  && <EducationEditor   data={data} onChange={handleChange} />}
+            {activeSection === "hero"        && <HeroEditor       data={data} onChange={handleChange} />}
+            {activeSection === "about"       && <AboutEditor      data={data} onChange={handleChange} />}
+            {activeSection === "experience"  && <ExperienceEditor  data={data} onChange={handleChange} />}
+            {activeSection === "projects"    && <ProjectsEditor    data={data} onChange={handleChange} />}
+            {activeSection === "skills"      && <SkillsEditor      data={data} onChange={handleChange} />}
+            {activeSection === "education"   && <EducationEditor   data={data} onChange={handleChange} />}
+            {activeSection === "kaia_config" && <KaiaConfigEditor  data={data} onChange={handleChange} />}
           </>
         ) : null}
       </div>

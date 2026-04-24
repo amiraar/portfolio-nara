@@ -18,6 +18,7 @@ import ConversationList from "@/components/dashboard/ConversationList";
 import ConversationDetail from "@/components/dashboard/ConversationDetail";
 import OwnerReply from "@/components/dashboard/OwnerReply";
 import ContentEditor from "@/components/dashboard/ContentEditor";
+import MessageChart from "@/components/dashboard/MessageChart";
 import { getPusherClient } from "@/lib/pusherClient";
 
 const POLL_INTERVAL = 30_000; // 30 seconds
@@ -369,22 +370,27 @@ export default function DashboardPage() {
         >
           {/* Analytics stats strip */}
           {analytics && (
-            <div className="px-4 py-3 border-b border-border grid grid-cols-2 gap-x-3 gap-y-2">
-              <div>
-                <p className="font-mono text-[10px] text-text-muted uppercase tracking-wide">Visitors</p>
-                <p className="font-mono text-sm font-medium text-text-primary">{analytics.totalVisitors}</p>
+            <div className="px-4 py-3 border-b border-border">
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                <div>
+                  <p className="font-mono text-[10px] text-text-muted uppercase tracking-wide">Visitors</p>
+                  <p className="font-mono text-sm font-medium text-text-primary">{analytics.totalVisitors}</p>
+                </div>
+                <div>
+                  <p className="font-mono text-[10px] text-text-muted uppercase tracking-wide">Active</p>
+                  <p className="font-mono text-sm font-medium text-accent">{analytics.activeConversations}</p>
+                </div>
+                <div>
+                  <p className="font-mono text-[10px] text-text-muted uppercase tracking-wide">Resolved / mo</p>
+                  <p className="font-mono text-sm font-medium text-text-primary">{analytics.resolvedThisMonth}</p>
+                </div>
+                <div>
+                  <p className="font-mono text-[10px] text-text-muted uppercase tracking-wide">Messages / mo</p>
+                  <p className="font-mono text-sm font-medium text-text-primary">{analytics.messagesThisMonth}</p>
+                </div>
               </div>
-              <div>
-                <p className="font-mono text-[10px] text-text-muted uppercase tracking-wide">Active</p>
-                <p className="font-mono text-sm font-medium text-accent">{analytics.activeConversations}</p>
-              </div>
-              <div>
-                <p className="font-mono text-[10px] text-text-muted uppercase tracking-wide">Resolved / mo</p>
-                <p className="font-mono text-sm font-medium text-text-primary">{analytics.resolvedThisMonth}</p>
-              </div>
-              <div>
-                <p className="font-mono text-[10px] text-text-muted uppercase tracking-wide">Messages / mo</p>
-                <p className="font-mono text-sm font-medium text-text-primary">{analytics.messagesThisMonth}</p>
+              <div className="border-t border-border pt-3 mt-3">
+                <MessageChart />
               </div>
             </div>
           )}

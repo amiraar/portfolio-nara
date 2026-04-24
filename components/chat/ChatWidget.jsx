@@ -181,6 +181,12 @@ export default function ChatWidget() {
           // Load conversation from server (cookie is now set)
           try {
             const r = await fetch(`/api/conversations/${conversationId}`);
+            if (r.status === 401 || r.status === 403) {
+              localStorage.removeItem("nara_visitor");
+              setHasSession(false);
+              setVisitor(null);
+              return;
+            }
             const { conversation: c } = await r.json();
             if (c) {
               setConversation(c);
