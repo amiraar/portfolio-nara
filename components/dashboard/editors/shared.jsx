@@ -198,7 +198,7 @@ export function PeriodInput({ value, onChange, current, onCurrentChange }) {
       <label className="flex items-center gap-2 cursor-pointer select-none">
         <input type="checkbox" checked={!!current}
           onChange={(e) => { onCurrentChange(e.target.checked); onChange(buildPeriod(start, end, e.target.checked)); }}
-          className="accent-[#C9A96E] w-4 h-4" />
+          className="accent-[rgb(var(--color-accent))] w-4 h-4" />
         <span className="text-sm text-text-muted">Pekerjaan saat ini (Current)</span>
       </label>
     </div>

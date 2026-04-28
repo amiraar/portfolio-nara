@@ -17,8 +17,8 @@ module.exports = {
         border: "rgb(var(--color-border) / <alpha-value>)",
       },
       fontFamily: {
-        display: ["Playfair Display", "Georgia", "serif"],
-        sans: ["DM Sans", "Inter", "sans-serif"],
+        display: ["Fraunces", "Georgia", "serif"],
+        sans: ["Inter", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "Fira Code", "monospace"],
       },
       animation: {
@@ -26,6 +26,8 @@ module.exports = {
         "slide-up": "slideUp 0.35s cubic-bezier(0.16,1,0.3,1) forwards",
         "slide-down": "slideDown 0.3s ease forwards",
         "pulse-dot": "pulseDot 1.4s ease-in-out infinite",
+        shimmer: "shimmer 4s ease infinite",
+        float: "float 6s ease-in-out infinite",
       },
       keyframes: {
         fadeIn: {
@@ -44,9 +46,19 @@ module.exports = {
           "0%, 80%, 100%": { transform: "scale(0.6)", opacity: "0.4" },
           "40%": { transform: "scale(1)", opacity: "1" },
         },
+        shimmer: {
+          "0%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+          "100%": { backgroundPosition: "0% 50%" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-12px)" },
+        },
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
+        "gradient-accent": "linear-gradient(135deg, #6366f1, #a78bfa, #06b6d4)",
       },
     },
   },

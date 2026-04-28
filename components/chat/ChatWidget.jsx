@@ -438,19 +438,17 @@ export default function ChatWidget() {
           style={{ boxShadow: "0 20px 60px rgb(var(--color-bg) / 0.5), 0 0 0 1px rgb(var(--color-accent) / 0.1)" }}
         >
           {/* Header */}
-          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border bg-surface/80 backdrop-blur-sm flex-shrink-0">
-            <div className="relative w-8 h-8 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center">
-              <span className="font-mono text-accent text-xs font-medium">K</span>
+          <div className="flex items-center gap-3 px-4 py-3.5 glass-card bg-gradient-to-r from-surface/80 via-surface/60 to-accent/10 flex-shrink-0">
+            <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-accent to-purple-500 flex items-center justify-center">
+              <span className="font-mono text-white text-sm">K</span>
               {/* Online dot */}
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-surface" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-display text-sm font-medium text-text-primary leading-none">
-                Kaia
+                Kaia · AI Assistant
               </p>
-              <p className="text-[11px] text-text-muted mt-0.5">
-                Amirul&apos;s assistant · Usually replies instantly
-              </p>
+              <p className="text-[11px] text-text-muted mt-0.5">Replies instantly</p>
             </div>
             {/* Reset conversation */}
             {hasSession && (
@@ -530,53 +528,30 @@ export default function ChatWidget() {
         "fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2",
         widgetState === "open" ? "hidden sm:flex" : "flex"
       )}>
-        {/* Tooltip — shown when bubble is visible but window is closed */}
-        {widgetState === "bubble" && (
-          <div className="animate-fade-in bg-surface border border-border rounded-xl px-3 py-2 shadow-lg">
-            <p className="text-xs text-text-primary font-medium whitespace-nowrap">
-              Chat with Kaia ✨
-            </p>
-          </div>
-        )}
-
         <button
           onClick={widgetState === "open" ? closeWidget : openWidget}
-          className="relative w-14 h-14 rounded-full bg-accent hover:bg-accent-hover transition-all duration-300 shadow-lg flex items-center justify-center group animate-fade-in text-background"
-          style={{ boxShadow: "0 4px 24px rgb(var(--color-accent) / 0.35)" }}
+          className={clsx(
+            "relative rounded-full flex items-center gap-3 bg-surface border border-border shadow-xl shadow-black/20 transition-all animate-fade-in",
+            "hover:border-accent/40 hover:-translate-y-0.5",
+            "w-12 h-12 p-0 justify-center sm:w-auto sm:h-auto sm:px-5 sm:py-3 sm:justify-start"
+          )}
           aria-label={widgetState === "open" ? "Close chat" : "Open chat"}
         >
-          {/* Unread badge */}
-          {unreadCount > 0 && widgetState !== "open" && (
-            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-mono font-bold flex items-center justify-center leading-none shadow-md">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-          {widgetState === "open" ? (
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path
-                d="M2 2l14 14M16 2L2 16"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          ) : (
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <path
-                d="M19 3H3a1 1 0 00-1 1v12a1 1 0 001 1h3l3 3 3-3h7a1 1 0 001-1V4a1 1 0 00-1-1z"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M7 9h8M7 13h5"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
-          )}
+          <span className="hidden sm:inline-flex items-center justify-center">
+            {unreadCount > 0 && widgetState !== "open" ? (
+              <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-400 text-[10px] font-mono font-bold text-background flex items-center justify-center leading-none">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            ) : (
+              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+            )}
+          </span>
+          <span className="hidden sm:inline-flex text-sm text-text-primary font-medium">
+            Chat with Kaia
+          </span>
+          <span className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center">
+            <span className="text-accent text-[10px] font-mono">K</span>
+          </span>
         </button>
       </div>
     </>

@@ -95,7 +95,7 @@ export default function ProjectsEditor({ data, onChange }) {
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input type="checkbox" checked={!!project.highlight}
                   onChange={(e) => updateItem(i, { ...project, highlight: e.target.checked })}
-                  className="accent-[#C9A96E] w-4 h-4" />
+                  className="accent-[rgb(var(--color-accent))] w-4 h-4" />
                 <span className="text-sm text-text-muted">Featured project (border gold)</span>
               </label>
             </div>

@@ -9,51 +9,68 @@ import { useRef } from "react";
 import { usePortfolioContent } from "@/lib/usePortfolioContent";
 import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
 import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
-import PortfolioSectionHeader from "@/components/shared/PortfolioSectionHeader";
 
 export default function Contact() {
   const sectionRef = useRef(null);
   const { data } = usePortfolioContent("education", PORTFOLIO_DEFAULTS.education);
   useRevealOnScroll(sectionRef, 0.1);
 
-  return (
-    <section id="contact" className="pb-28 max-w-5xl mx-auto px-6 lg:px-8">
-      <div ref={sectionRef} className="section-reveal">
-        <PortfolioSectionHeader number="06" title="Contact" />
+  const headingParts = (data.contactHeading ?? "").trim().split(/\s+/).filter(Boolean);
+  const headingFirst = headingParts[0] ?? "";
+  const headingRest = headingParts.slice(1).join(" ");
 
-        <div className="max-w-md p-6 rounded-xl border border-border bg-surface/60">
-          <p className="font-mono text-xs text-accent mb-4 tracking-wider uppercase">Get in Touch</p>
-          <h3 className="font-display text-xl font-medium text-text-primary leading-snug mb-2">
-            {data.contactHeading}
-          </h3>
-          <p className="text-text-muted text-sm leading-relaxed mb-6">
+  return (
+    <section id="contact" className="pb-28 max-w-6xl mx-auto px-6 lg:px-8">
+      <div ref={sectionRef} className="section-reveal">
+        <div className="bg-gradient-to-br from-accent/5 via-transparent to-purple-500/5 rounded-3xl p-8 lg:p-12">
+          <h2 className="font-display text-4xl lg:text-5xl font-medium text-text-primary">
+            {headingFirst}
+            {headingRest ? <span className="gradient-text"> {headingRest}</span> : null}
+          </h2>
+          <p className="text-text-muted text-lg leading-relaxed max-w-xl mt-4">
             {data.contactSubtext}
           </p>
 
-          <div className="space-y-3">
+          <div className="mt-8 flex flex-col md:flex-row gap-4">
             <a
               href={`mailto:${data.email}`}
-              className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-accent/30 transition-all group"
+              className="glass-card p-6 rounded-2xl flex-1 group cursor-pointer hover:-translate-y-1 hover:border-accent/40 transition-all"
             >
-              <div>
-                <p className="text-xs text-text-muted font-mono">Email</p>
-                <p className="text-sm text-text-primary mt-0.5">{data.email}</p>
+              <div className="flex items-center gap-4">
+                <div>
+                  <p className="font-mono text-[10px] text-accent">EMAIL</p>
+                  <p className="text-text-primary text-sm mt-2">{data.email}</p>
+                </div>
+                <span className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-text-muted">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M4 12L12 4M12 4H7M12 4V9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
               </div>
-              <span className="text-text-muted group-hover:text-accent transition-colors">↗</span>
             </a>
             <a
               href={data.linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-accent/30 transition-all group"
+              className="glass-card p-6 rounded-2xl flex-1 group cursor-pointer hover:-translate-y-1 hover:border-accent/40 transition-all"
             >
-              <div>
-                <p className="text-xs text-text-muted font-mono">LinkedIn</p>
-                <p className="text-sm text-text-primary mt-0.5">{data.linkedinLabel}</p>
+              <div className="flex items-center gap-4">
+                <div>
+                  <p className="font-mono text-[10px] text-accent">LINKEDIN</p>
+                  <p className="text-text-primary text-sm mt-2">{data.linkedinLabel}</p>
+                </div>
+                <span className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-text-muted">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M4 12L12 4M12 4H7M12 4V9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
               </div>
-              <span className="text-text-muted group-hover:text-accent transition-colors">↗</span>
             </a>
           </div>
+
+          <p className="font-mono text-[10px] text-text-muted/50 text-center mt-6">
+            Response time &lt; 24h
+          </p>
         </div>
       </div>
     </section>
