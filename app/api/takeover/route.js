@@ -22,6 +22,12 @@ export async function PATCH(req) {
       return unauthorizedResponse();
     }
 
+    const origin = req.headers.get("origin");
+    const allowed = process.env.NEXTAUTH_URL;
+    if (!origin || !allowed || !origin.startsWith(allowed)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const body = await req.json();
     const { conversationId, mode } = body;
 

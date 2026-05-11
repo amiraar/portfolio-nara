@@ -42,6 +42,7 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [nextCursor, setNextCursor] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const searchDebounceRef = useRef(null);
 
   // Initial load + polling (only when session is confirmed by the client)
@@ -100,6 +101,7 @@ export default function DashboardPage() {
 
   /** Load selected conversation's full message history */
   const loadConversation = useCallback(async (convId) => {
+    setLoadingMessages(true);
     try {
       const res = await fetch(`/api/conversations/${convId}`);
       const data = await res.json();
@@ -112,6 +114,8 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error("Load conversation error:", err);
+    } finally {
+      setLoadingMessages(false);
     }
   }, []);
 
@@ -135,6 +139,16 @@ export default function DashboardPage() {
     if (selectedId) loadConversation(selectedId);
   }, [selectedId, loadConversation]);
 
+  useEffect(() => {
+    if (mobileView !== "detail") return;
+    if (typeof window === "undefined") return;
+    const handlePopState = () => {
+      handleBackToList();
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [mobileView]);
+
   // Pusher: subscribe dashboard channel + listen for new messages / mode changes
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -151,6 +165,31 @@ export default function DashboardPage() {
           return [...prev, message];
         });
       }
+
+      // Optimistically update list preview + unread count
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.id !== conversationId) return c;
+          const existing = c.messages || [];
+          const alreadyFirst = existing[0]?.id === message.id;
+          const nextMessages = alreadyFirst
+            ? existing
+            : [message, ...existing.filter((m) => m.id !== message.id)];
+          const nextUnread =
+            conversationId === selectedId
+              ? 0
+              : message?.role === "owner"
+              ? c.unreadCount || 0
+              : (c.unreadCount || 0) + 1;
+          return {
+            ...c,
+            messages: nextMessages,
+            updatedAt: message.timestamp || new Date().toISOString(),
+            unreadCount: nextUnread,
+          };
+        })
+      );
+
       // Refresh list to update previews + order
       fetchConversations();
       // Increment new badge if not currently selected
@@ -236,6 +275,13 @@ export default function DashboardPage() {
     setSelectedId(conv.id);
     setNewCount(0);
     setMobileView("detail"); // switch to detail on mobile
+    setLoadingMessages(true);
+    if (typeof window !== "undefined") {
+      const isMobile = window.matchMedia("(max-width: 640px)").matches;
+      if (isMobile) {
+        window.history.pushState({ dashboardView: "detail", conversationId: conv.id }, "");
+      }
+    }
     // Optimistically clear the unread badge in local state; the API will update
     // ownerLastReadAt in the background via loadConversation → GET /api/conversations/:id
     setConversations((prev) =>
@@ -246,11 +292,30 @@ export default function DashboardPage() {
   function handleBackToList() {
     setMobileView("list");
     setSelectedId(null);
+    setMessages([]);
+    setLoadingMessages(false);
+    if (typeof window !== "undefined") {
+      const isMobile = window.matchMedia("(max-width: 640px)").matches;
+      if (isMobile) {
+        window.history.replaceState({ dashboardView: "list" }, "");
+      }
+    }
   }
 
   function handleReplySent(message) {
     setMessages((prev) => {
-      if (prev.find((m) => m.id === message.id)) return prev;
+      if (message?._remove && message?.clientTempId) {
+        return prev.filter((m) => m.clientTempId !== message.clientTempId);
+      }
+      if (message?.clientTempId) {
+        const index = prev.findIndex((m) => m.clientTempId === message.clientTempId);
+        if (index !== -1) {
+          const next = [...prev];
+          next[index] = { ...message, pending: false };
+          return next;
+        }
+      }
+      if (message?.id && prev.find((m) => m.id === message.id)) return prev;
       return [...prev, message];
     });
   }
@@ -435,6 +500,11 @@ export default function DashboardPage() {
                 setSearchQuery(q);
                 // Debounce: wait 300ms after the user stops typing before fetching
                 clearTimeout(searchDebounceRef.current);
+                if (!q) {
+                  setNextCursor(null);
+                  fetchConversations("");
+                  return;
+                }
                 searchDebounceRef.current = setTimeout(() => {
                   setNextCursor(null);
                   fetchConversations(q);
@@ -510,6 +580,7 @@ export default function DashboardPage() {
                   onHandback={handleHandback}
                   onResolve={handleResolve}
                   isTakingOver={isTakingOver}
+                  loadingMessages={loadingMessages}
                 />
               </div>
               <OwnerReply

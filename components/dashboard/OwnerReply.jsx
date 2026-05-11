@@ -24,8 +24,21 @@ export default function OwnerReply({ conversationId, disabled = false, onSent })
     const trimmed = value.trim();
     if (!trimmed || sending || disabled) return;
 
+    const clientTempId = `owner-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const optimisticMessage = {
+      id: null,
+      clientTempId,
+      role: "owner",
+      content: trimmed,
+      timestamp: new Date().toISOString(),
+      pending: true,
+    };
+
     setSending(true);
     setError("");
+    setValue("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+    onSent?.(optimisticMessage);
     try {
       const res = await fetch("/api/send", {
         method: "POST",
@@ -34,11 +47,9 @@ export default function OwnerReply({ conversationId, disabled = false, onSent })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send");
-
-      setValue("");
-      if (textareaRef.current) textareaRef.current.style.height = "auto";
-      onSent?.(data.message);
+      onSent?.({ ...data.message, clientTempId, pending: false });
     } catch (err) {
+      onSent?.({ clientTempId, _remove: true });
       setError(err.message);
     } finally {
       setSending(false);

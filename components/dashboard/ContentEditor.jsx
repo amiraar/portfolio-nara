@@ -8,7 +8,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
-import { useUnsavedChangesGuard } from "@/lib/useUnsavedChangesGuard";
 import HeroEditor from "./editors/HeroEditor";
 import AboutEditor from "./editors/AboutEditor";
 import ExperienceEditor from "./editors/ExperienceEditor";
@@ -37,8 +36,8 @@ export default function ContentEditor() {
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState(null); // "saved" | "error"
   const [validationErrors, setValidationErrors] = useState([]);
+  const [pendingAction, setPendingAction] = useState(null); // { type: "switch" | "reset", section?: string }
   const timerRef = useRef(null);
-  const { confirmSwitch } = useUnsavedChangesGuard(dirty);
 
   const loadSection = useCallback(async (section) => {
     setLoading(true);
@@ -123,11 +122,40 @@ export default function ContentEditor() {
 
   function trySwitchSection(nextSection) {
     if (nextSection === activeSection) return;
-    confirmSwitch(() => {
+    if (!dirty) {
       setData(null);
       setValidationErrors([]);
       setActiveSection(nextSection);
-    }, "Perubahan belum disimpan. Pindah section dan buang perubahan?");
+      return;
+    }
+    setPendingAction({ type: "switch", section: nextSection });
+  }
+
+  function requestResetSection() {
+    if (!dirty) {
+      loadSection(activeSection);
+      setValidationErrors([]);
+      return;
+    }
+    setPendingAction({ type: "reset" });
+  }
+
+  function handleConfirmPending() {
+    if (!pendingAction) return;
+    if (pendingAction.type === "switch") {
+      setData(null);
+      setValidationErrors([]);
+      setActiveSection(pendingAction.section);
+    }
+    if (pendingAction.type === "reset") {
+      loadSection(activeSection);
+      setValidationErrors([]);
+    }
+    setPendingAction(null);
+  }
+
+  function handleCancelPending() {
+    setPendingAction(null);
   }
 
   async function handleSave() {
@@ -161,6 +189,32 @@ export default function ContentEditor() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {pendingAction && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-4 shadow-lg">
+            <h3 className="font-display text-sm text-text-primary">Discard unsaved changes?</h3>
+            <p className="text-xs text-text-muted mt-1">
+              {pendingAction.type === "switch"
+                ? "Perubahan belum disimpan. Pindah section dan buang perubahan?"
+                : "Reset section ini dan buang perubahan yang belum disimpan?"}
+            </p>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                onClick={handleCancelPending}
+                className="font-mono text-xs text-text-muted border border-border px-3 py-1.5 rounded-lg hover:border-text-muted/50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmPending}
+                className="font-mono text-xs bg-accent text-background px-3 py-1.5 rounded-lg hover:bg-accent/90 transition-colors"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Section tabs + save */}
       <div className="flex-shrink-0 flex items-center justify-between gap-2 p-3 border-b border-border bg-surface/40">
         <div className="flex gap-1 overflow-x-auto">
@@ -180,12 +234,7 @@ export default function ContentEditor() {
           {status === "saved" && <span className="font-mono text-xs text-green-400">✓ Tersimpan</span>}
           {status === "error" && <span className="font-mono text-xs text-red-400">✗ Gagal simpan</span>}
           <button
-            onClick={() => {
-              confirmSwitch(() => {
-                loadSection(activeSection);
-                setValidationErrors([]);
-              }, "Reset section ini dan buang perubahan yang belum disimpan?");
-            }}
+            onClick={requestResetSection}
             disabled={loading}
             className="font-mono text-xs text-text-muted border border-border px-3 py-1.5 rounded-lg hover:border-text-muted/50 transition-colors disabled:opacity-50">
             Reset

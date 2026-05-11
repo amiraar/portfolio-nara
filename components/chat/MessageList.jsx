@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { format } from "date-fns";
 
 /**
@@ -23,41 +23,43 @@ export default function MessageList({ messages, isTyping }) {
     return Number.isNaN(timeValue) ? Number.NaN : timeValue;
   }
 
-  const orderedMessages = messages
-    .map((message, index) => ({ message, index }))
-    .sort((a, b) => {
-      const aTime = getMessageTimeValue(a.message);
-      const bTime = getMessageTimeValue(b.message);
-      const aHasValidTime = Number.isFinite(aTime);
-      const bHasValidTime = Number.isFinite(bTime);
+  const orderedMessages = useMemo(() => {
+    return messages
+      .map((message, index) => ({ message, index }))
+      .sort((a, b) => {
+        const aTime = getMessageTimeValue(a.message);
+        const bTime = getMessageTimeValue(b.message);
+        const aHasValidTime = Number.isFinite(aTime);
+        const bHasValidTime = Number.isFinite(bTime);
 
-      if (aHasValidTime && bHasValidTime && aTime !== bTime) {
-        return aTime - bTime;
-      }
+        if (aHasValidTime && bHasValidTime && aTime !== bTime) {
+          return aTime - bTime;
+        }
 
-      // For same timestamp: if one is an optimistic message with _insertOrder, use it.
-      // This prevents clock-skew from reordering a just-sent message behind its
-      // server-echoed confirmation when both carry the same millisecond timestamp.
-      const aOrder = a.message?._insertOrder;
-      const bOrder = b.message?._insertOrder;
-      if (typeof aOrder === "number" && typeof bOrder === "number") {
-        return aOrder - bOrder;
-      }
-      if (typeof aOrder === "number") return 1;  // optimistic messages go last in ties
-      if (typeof bOrder === "number") return -1;
+        // For same timestamp: if one is an optimistic message with _insertOrder, use it.
+        // This prevents clock-skew from reordering a just-sent message behind its
+        // server-echoed confirmation when both carry the same millisecond timestamp.
+        const aOrder = a.message?._insertOrder;
+        const bOrder = b.message?._insertOrder;
+        if (typeof aOrder === "number" && typeof bOrder === "number") {
+          return aOrder - bOrder;
+        }
+        if (typeof aOrder === "number") return 1;  // optimistic messages go last in ties
+        if (typeof bOrder === "number") return -1;
 
-      // For same timestamp, keep user message before assistant/owner.
-      const aRole = String(a.message?.role || "");
-      const bRole = String(b.message?.role || "");
-      if (aRole !== bRole) {
-        if (aRole === "user") return -1;
-        if (bRole === "user") return 1;
-      }
+        // For same timestamp, keep user message before assistant/owner.
+        const aRole = String(a.message?.role || "");
+        const bRole = String(b.message?.role || "");
+        if (aRole !== bRole) {
+          if (aRole === "user") return -1;
+          if (bRole === "user") return 1;
+        }
 
-      // Stable fallback order.
-      return a.index - b.index;
-    })
-    .map(({ message }) => message);
+        // Stable fallback order.
+        return a.index - b.index;
+      })
+      .map(({ message }) => message);
+  }, [messages]);
 
   function getMessageKey(message, index) {
     if (message?.id !== undefined && message?.id !== null && String(message.id).trim()) {
