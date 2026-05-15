@@ -61,6 +61,9 @@ export default function EducationEditor({ data, onChange }) {
           <Field label="Footer Copyright">
             <input className={inputCls} value={data.footerCopy ?? ""} onChange={(e) => set("footerCopy", e.target.value)} placeholder="© 2026 ..." />
           </Field>
+          <Field label="GitHub URL">
+            <input className={inputCls} value={data.github ?? ""} onChange={(e) => set("github", e.target.value)} placeholder="https://github.com/username" />
+          </Field>
         </div>
       </div>
     </div>

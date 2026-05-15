@@ -13,7 +13,8 @@ import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
 export default function Hero({ onChatOpen }) {
   const containerRef = useRef(null);
   const { data } = usePortfolioContent("hero", PORTFOLIO_DEFAULTS.hero);
-  const stats = PORTFOLIO_DEFAULTS.skills.stats.slice(0, 3);
+  const { data: skillsData } = usePortfolioContent("skills", PORTFOLIO_DEFAULTS.skills);
+  const stats = (skillsData?.stats ?? PORTFOLIO_DEFAULTS.skills.stats).slice(0, 3);
 
   const nameParts = (data.name ?? "").trim().split(/\s+/).filter(Boolean);
   const firstName = nameParts[0] ?? "";

@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
+import { notifyPortfolioUpdate } from "@/lib/usePortfolioContent";
 import HeroEditor from "./editors/HeroEditor";
 import AboutEditor from "./editors/AboutEditor";
 import ExperienceEditor from "./editors/ExperienceEditor";
@@ -178,6 +179,7 @@ export default function ContentEditor() {
       setStatus("saved");
       setDirty(false);
       setValidationErrors([]);
+      notifyPortfolioUpdate(activeSection, data);
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => setStatus(null), 3000);
     } catch {
