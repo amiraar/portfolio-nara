@@ -20,9 +20,7 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   // Keep Prisma as external package in server components.
-  experimental: {
-    serverComponentsExternalPackages: ["@prisma/client", "prisma"],
-  },
+  serverExternalPackages: ["@prisma/client", "prisma"],
   async headers() {
     return [
       {
