@@ -442,7 +442,7 @@ export default function ChatWidget() {
             <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-accent to-purple-500 flex items-center justify-center">
               <span className="font-mono text-white text-sm">K</span>
               {/* Online dot */}
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-surface" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-success border-2 border-surface" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-display text-sm font-medium text-text-primary leading-none">
@@ -539,11 +539,11 @@ export default function ChatWidget() {
         >
           <span className="hidden sm:inline-flex items-center justify-center">
             {unreadCount > 0 && widgetState !== "open" ? (
-              <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-400 text-[10px] font-mono font-bold text-background flex items-center justify-center leading-none">
+              <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-success text-[10px] font-mono font-bold text-background flex items-center justify-center leading-none">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             ) : (
-              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+              <span className="w-2 h-2 bg-success rounded-full animate-pulse" />
             )}
           </span>
           <span className="hidden sm:inline-flex text-sm text-text-primary font-medium">
