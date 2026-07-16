@@ -10,11 +10,14 @@ module.exports = {
       colors: {
         background: "rgb(var(--color-bg) / <alpha-value>)",
         surface: "rgb(var(--color-surface) / <alpha-value>)",
+        "surface-2": "rgb(var(--color-surface-2) / <alpha-value>)",
         accent: "rgb(var(--color-accent) / <alpha-value>)",
+        "accent-2": "rgb(var(--color-accent-2) / <alpha-value>)",
         "accent-hover": "rgb(var(--color-accent-hover) / <alpha-value>)",
         "text-primary": "rgb(var(--color-text) / <alpha-value>)",
         "text-muted": "rgb(var(--color-muted) / <alpha-value>)",
         border: "rgb(var(--color-border) / <alpha-value>)",
+        success: "rgb(var(--color-success) / <alpha-value>)",
       },
       fontFamily: {
         display: ["Fraunces", "Georgia", "serif"],
@@ -27,7 +30,8 @@ module.exports = {
         "slide-down": "slideDown 0.3s ease forwards",
         "pulse-dot": "pulseDot 1.4s ease-in-out infinite",
         shimmer: "shimmer 4s ease infinite",
-        float: "float 6s ease-in-out infinite",
+        float: "float 7s ease-in-out infinite",
+        "spin-slow": "spin 20s linear infinite",
       },
       keyframes: {
         fadeIn: {
@@ -52,13 +56,15 @@ module.exports = {
           "100%": { backgroundPosition: "0% 50%" },
         },
         float: {
-          "0%, 100%": { transform: "translateY(0px)" },
-          "50%": { transform: "translateY(-12px)" },
+          "0%, 100%": { transform: "translateY(0px) rotate(0deg)" },
+          "33%": { transform: "translateY(-10px) rotate(0.5deg)" },
+          "66%": { transform: "translateY(-4px) rotate(-0.5deg)" },
         },
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-accent": "linear-gradient(135deg, #6366f1, #a78bfa, #06b6d4)",
+        "gradient-accent":
+          "linear-gradient(135deg, rgb(var(--color-accent)), rgb(var(--color-accent-2)))",
       },
     },
   },
