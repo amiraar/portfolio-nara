@@ -16,7 +16,7 @@ Ripping it out now would repeat the mistake the doc warns against: spending more
 | Label proprietary projects instead of blank links | ✅ Done | `components/portfolio/Projects.jsx` shows a "Proprietary" badge when `project.link` is empty, instead of silently omitting the link icon. |
 | Replace bit.ly links with direct Figma URLs (4 UX projects) | ✅ Done | Real URLs supplied by the repo owner and confirmed public. Wired into `lib/portfolioDefaults.js`. |
 | Case-study writeups + screenshots for Racker, QuickCue, CPTool | 🔲 Blocked | Waiting on writeups from the repo owner (proprietary SoftwareSeni work — no public repo/demo possible, so a written case study + screenshot is the substitute). |
-| Case study + public repo link for Nara itself as flagship project | 🔲 Not started | Depends on the above; do this once the other project case studies are in. |
+| Case study + public repo link for Nara itself as flagship project | ❌ Won't do | Owner decision — declined. |
 | `usePortfolioContent.test.js` cache tests failing | 🔲 Flagged, not fixed | Pre-existing bug in the caching logic, unrelated to the alignment work — out of scope here. |
 
 ## Scope discipline
