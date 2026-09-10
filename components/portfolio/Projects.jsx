@@ -122,7 +122,11 @@ function ProjectCard({ project, spanClass, index }) {
               <path d="M2.5 9.5L9.5 2.5M9.5 2.5H5.5M9.5 2.5V6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </a>
-        ) : null}
+        ) : (
+          <span className="font-mono text-[9px] uppercase tracking-widest text-text-muted/50 flex-shrink-0">
+            Proprietary
+          </span>
+        )}
       </div>
     </article>
   );
