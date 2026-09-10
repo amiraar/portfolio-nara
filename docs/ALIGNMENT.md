@@ -15,7 +15,8 @@ Ripping it out now would repeat the mistake the doc warns against: spending more
 | Remove unused `openai` dependency | ✅ Done | Never imported; Kaia only uses Gemini (`lib/gemini.js`). |
 | Label proprietary projects instead of blank links | ✅ Done | `components/portfolio/Projects.jsx` shows a "Proprietary" badge when `project.link` is empty, instead of silently omitting the link icon. |
 | Replace bit.ly links with direct Figma URLs (4 UX projects) | ✅ Done | Real URLs supplied by the repo owner and confirmed public. Wired into `lib/portfolioDefaults.js`. |
-| Case-study writeups + screenshots for Racker, QuickCue, CPTool | 🔲 Blocked | Waiting on writeups from the repo owner (proprietary SoftwareSeni work — no public repo/demo possible, so a written case study + screenshot is the substitute). |
+| Case-study text for Racker, QuickCue, CPTool | ✅ Done | Problem/approach/result writeups from the repo owner, wired into `lib/portfolioDefaults.js` (`caseStudy` field) and rendered via a click-to-expand modal in `components/portfolio/Projects.jsx`. |
+| Screenshots for Racker, QuickCue, CPTool | 🔲 Blocked | Not sent yet — `screenshots: []` is empty per project. Modal renders a screenshot gallery automatically once populated with image paths. |
 | Case study + public repo link for Nara itself as flagship project | ❌ Won't do | Owner decision — declined. |
 | `usePortfolioContent.test.js` cache tests failing | 🔲 Flagged, not fixed | Pre-existing bug in the caching logic, unrelated to the alignment work — out of scope here. |
 
