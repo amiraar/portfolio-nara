@@ -9,6 +9,14 @@ import { useState, useEffect } from "react";
 import { Field, inputCls, textareaCls, TagInput, BtnDanger, BtnSecondary } from "./primitives";
 
 const EMPTY_PROJECT = { name: "", type: "", company: "", description: "", tags: [], link: "", highlight: false, metric: "" };
+const EMPTY_CASE_STUDY = { problem: "", approach: [], result: "" };
+
+function approachToText(approach) {
+  return Array.isArray(approach) ? approach.join("\n") : (approach ?? "");
+}
+function textToApproach(text) {
+  return text.split("\n").map((line) => line.trim()).filter(Boolean);
+}
 
 export default function ProjectsEditor({ data, onChange }) {
   const [expandedIdx, setExpandedIdx] = useState(null);
@@ -98,6 +106,42 @@ export default function ProjectsEditor({ data, onChange }) {
                   className="accent-[rgb(var(--color-accent))] w-4 h-4" />
                 <span className="text-sm text-text-muted">Featured project (border gold)</span>
               </label>
+
+              <div className="border-t border-border pt-4 space-y-4">
+                <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest">
+                  Case Study (opsional — dipakai saat tidak ada Link, tampil di modal klik-untuk-buka)
+                </p>
+                <Field label="Problem">
+                  <textarea className={textareaCls} rows={3}
+                    value={project.caseStudy?.problem ?? ""}
+                    onChange={(e) => updateItem(i, {
+                      ...project,
+                      caseStudy: { ...(project.caseStudy ?? EMPTY_CASE_STUDY), problem: e.target.value },
+                    })}
+                    placeholder="Masalah apa yang diselesaikan project ini?" />
+                </Field>
+                <Field label="Approach (satu poin per baris)">
+                  <textarea className={textareaCls} rows={6}
+                    value={approachToText(project.caseStudy?.approach)}
+                    onChange={(e) => updateItem(i, {
+                      ...project,
+                      caseStudy: { ...(project.caseStudy ?? EMPTY_CASE_STUDY), approach: textToApproach(e.target.value) },
+                    })}
+                    placeholder={"Poin teknis 1...\nPoin teknis 2..."} />
+                </Field>
+                <Field label="Result">
+                  <textarea className={textareaCls} rows={3}
+                    value={project.caseStudy?.result ?? ""}
+                    onChange={(e) => updateItem(i, {
+                      ...project,
+                      caseStudy: { ...(project.caseStudy ?? EMPTY_CASE_STUDY), result: e.target.value },
+                    })}
+                    placeholder="Hasil/status akhir — jujur, jangan mengarang metrik." />
+                </Field>
+                <Field label="Screenshots (path gambar, mis. /projects/nama-file.png)">
+                  <TagInput tags={project.screenshots ?? []} onChange={(screenshots) => updateItem(i, { ...project, screenshots })} />
+                </Field>
+              </div>
             </div>
           )}
         </div>

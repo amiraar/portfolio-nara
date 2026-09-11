@@ -174,6 +174,12 @@ export default function ContentEditor({ section, apiSection, onDirtyChange }) {
     setValidationErrors([]);
   }
 
+  function handleLoadCodeDefaults() {
+    if (!window.confirm("Ganti isi editor dengan default dari kode? Perubahan belum tersimpan akan hilang. Klik Save setelah meninjau untuk menerapkannya ke situs.")) return;
+    handleChange(DEFAULTS[apiSection]);
+    setValidationErrors([]);
+  }
+
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Toolbar */}
@@ -191,6 +197,14 @@ export default function ContentEditor({ section, apiSection, onDirtyChange }) {
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={handleLoadCodeDefaults}
+            disabled={loading}
+            title="Muat isi default dari lib/portfolioDefaults.js (belum tersimpan sampai klik Save)"
+            className="font-mono text-[11px] text-text-muted border border-border px-3 py-1.5 rounded-lg hover:border-accent/40 hover:text-accent transition-colors disabled:opacity-40"
+          >
+            Load code defaults
+          </button>
           <button
             onClick={handleReset}
             disabled={loading}
