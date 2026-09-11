@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { usePortfolioContent } from "@/lib/usePortfolioContent";
 import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
@@ -19,6 +19,7 @@ const COL_SPANS = [
 export default function Projects() {
   const sectionRef = useRef(null);
   const { data: projects } = usePortfolioContent("projects", PORTFOLIO_DEFAULTS.projects);
+  const [activeProject, setActiveProject] = useState(null);
   useRevealOnScroll(sectionRef, 0.06);
 
   return (
@@ -39,22 +40,42 @@ export default function Projects() {
               project={project}
               spanClass={project.highlight ? "md:col-span-4" : (COL_SPANS[index] ?? "md:col-span-2")}
               index={index}
+              onOpenCaseStudy={() => setActiveProject(project)}
             />
           ))}
         </div>
       </div>
+
+      {activeProject ? (
+        <CaseStudyModal project={activeProject} onClose={() => setActiveProject(null)} />
+      ) : null}
     </section>
   );
 }
 
-function ProjectCard({ project, spanClass, index }) {
+function ProjectCard({ project, spanClass, index, onOpenCaseStudy }) {
   const isWide = spanClass === "md:col-span-4";
+  const hasCaseStudy = Boolean(project.caseStudy);
 
   return (
     <article
+      onClick={hasCaseStudy ? onOpenCaseStudy : undefined}
+      role={hasCaseStudy ? "button" : undefined}
+      tabIndex={hasCaseStudy ? 0 : undefined}
+      onKeyDown={
+        hasCaseStudy
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onOpenCaseStudy();
+              }
+            }
+          : undefined
+      }
       className={clsx(
-        "warm-card rounded-2xl overflow-hidden group cursor-default relative transition-all duration-250",
+        "warm-card rounded-2xl overflow-hidden group relative transition-all duration-250",
         "hover:-translate-y-0.5 hover:border-accent/30",
+        hasCaseStudy ? "cursor-pointer" : "cursor-default",
         spanClass
       )}
     >
@@ -122,6 +143,10 @@ function ProjectCard({ project, spanClass, index }) {
               <path d="M2.5 9.5L9.5 2.5M9.5 2.5H5.5M9.5 2.5V6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </a>
+        ) : project.caseStudy ? (
+          <span className="font-mono text-[9px] uppercase tracking-widest text-accent/70 flex-shrink-0">
+            Proprietary — Case study →
+          </span>
         ) : (
           <span className="font-mono text-[9px] uppercase tracking-widest text-text-muted/50 flex-shrink-0">
             Proprietary
@@ -129,5 +154,110 @@ function ProjectCard({ project, spanClass, index }) {
         )}
       </div>
     </article>
+  );
+}
+
+function CaseStudyModal({ project, onClose }) {
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+
+  const { caseStudy, screenshots = [] } = project;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 sm:p-6 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${project.name} case study`}
+    >
+      <div
+        className="fixed inset-0 bg-background/80 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      <div className="warm-card relative w-full max-w-2xl rounded-2xl overflow-hidden my-8 sm:my-0">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close case study"
+          className="absolute top-4 right-4 w-8 h-8 rounded-full border border-border flex items-center justify-center hover:border-accent hover:bg-accent/8 transition-all z-10"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+          </svg>
+        </button>
+
+        <div className="p-6 sm:p-8">
+          <span className="font-mono text-[9px] uppercase tracking-widest text-accent/70">
+            {project.type}
+          </span>
+          <h3 className="font-display text-2xl sm:text-3xl font-medium text-text-primary mt-2">
+            {project.name}
+          </h3>
+          <p className="font-mono text-[10px] text-text-muted/60 mt-1">{project.company}</p>
+
+          <div className="flex flex-wrap gap-1.5 mt-4">
+            {project.tags.map((tag) => (
+              <span key={tag} className="tag-pill">{tag}</span>
+            ))}
+          </div>
+
+          {screenshots.length > 0 ? (
+            <div className="mt-6 grid grid-cols-1 gap-3">
+              {screenshots.map((src) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={src}
+                  src={src}
+                  alt={`${project.name} screenshot`}
+                  className="rounded-lg border border-border w-full"
+                />
+              ))}
+            </div>
+          ) : null}
+
+          <div className="mt-6 space-y-5 text-[13px] text-text-muted leading-[1.7]">
+            <section>
+              <h4 className="font-mono text-[10px] uppercase tracking-widest text-text-primary mb-1.5">
+                Problem
+              </h4>
+              <p>{caseStudy.problem}</p>
+            </section>
+
+            <section>
+              <h4 className="font-mono text-[10px] uppercase tracking-widest text-text-primary mb-1.5">
+                Approach
+              </h4>
+              {Array.isArray(caseStudy.approach) ? (
+                <ul className="space-y-2 list-disc pl-4">
+                  {caseStudy.approach.map((point, i) => (
+                    <li key={i}>{point}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>{caseStudy.approach}</p>
+              )}
+            </section>
+
+            <section>
+              <h4 className="font-mono text-[10px] uppercase tracking-widest text-text-primary mb-1.5">
+                Result
+              </h4>
+              <p>{caseStudy.result}</p>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
