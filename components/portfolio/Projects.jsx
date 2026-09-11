@@ -131,27 +131,32 @@ function ProjectCard({ project, spanClass, index, onOpenCaseStudy }) {
           ))}
         </div>
 
-        {project.link ? (
-          <a
-            href={project.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-7 h-7 flex-shrink-0 rounded-full border border-border flex items-center justify-center hover:border-accent hover:bg-accent/8 transition-all"
-            aria-label="View project"
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <path d="M2.5 9.5L9.5 2.5M9.5 2.5H5.5M9.5 2.5V6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </a>
-        ) : project.caseStudy ? (
-          <span className="font-mono text-[9px] uppercase tracking-widest text-accent/70 flex-shrink-0">
-            Proprietary — Case study →
-          </span>
-        ) : (
-          <span className="font-mono text-[9px] uppercase tracking-widest text-text-muted/50 flex-shrink-0">
-            Proprietary
-          </span>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {project.caseStudy ? (
+            <span className="font-mono text-[9px] uppercase tracking-widest text-accent/70">
+              {project.link ? "Case study →" : "Proprietary — Case study →"}
+            </span>
+          ) : !project.link ? (
+            <span className="font-mono text-[9px] uppercase tracking-widest text-text-muted/50">
+              Proprietary
+            </span>
+          ) : null}
+
+          {project.link ? (
+            <a
+              href={project.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="w-7 h-7 flex-shrink-0 rounded-full border border-border flex items-center justify-center hover:border-accent hover:bg-accent/8 transition-all"
+              aria-label="View project"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <path d="M2.5 9.5L9.5 2.5M9.5 2.5H5.5M9.5 2.5V6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </a>
+          ) : null}
+        </div>
       </div>
     </article>
   );
