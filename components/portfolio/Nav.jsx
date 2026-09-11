@@ -158,7 +158,7 @@ export default function Nav() {
       {/* Mobile menu */}
       <div
         className={clsx(
-          "sm:hidden overflow-hidden transition-all duration-300 border-t border-border/40",
+          "sm:hidden overflow-hidden transition-all duration-300 border-t border-border/40 bg-background/95 backdrop-blur-xl",
           menuOpen ? "max-h-72 opacity-100" : "max-h-0 opacity-0"
         )}
       >
