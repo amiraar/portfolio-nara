@@ -174,7 +174,7 @@ function CaseStudyModal({ project, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-label={`${project.name} case study`}
@@ -185,46 +185,37 @@ function CaseStudyModal({ project, onClose }) {
         aria-hidden="true"
       />
 
-      <div className="warm-card relative w-full max-w-2xl rounded-2xl overflow-hidden my-8 sm:my-0">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close case study"
-          className="absolute top-4 right-4 w-8 h-8 rounded-full border border-border flex items-center justify-center hover:border-accent hover:bg-accent/8 transition-all z-10"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-          </svg>
-        </button>
+      <div className="warm-card relative w-full max-w-2xl max-h-[85vh] rounded-2xl overflow-hidden flex flex-col">
+        {/* Header — stays fixed while the body below scrolls */}
+        <div className="flex items-start justify-between gap-4 px-6 sm:px-8 pt-6 sm:pt-8 pb-4 border-b border-border/60 flex-shrink-0">
+          <div className="min-w-0">
+            <span className="font-mono text-[9px] uppercase tracking-widest text-accent/70">
+              {project.type}
+            </span>
+            <h3 className="font-display text-2xl sm:text-3xl font-medium text-text-primary mt-1 leading-tight">
+              {project.name}
+            </h3>
+            <p className="font-mono text-[10px] text-text-muted/60 mt-1">{project.company}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close case study"
+            className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:border-accent hover:bg-accent/8 transition-all flex-shrink-0"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
 
-        <div className="p-6 sm:p-8">
-          <span className="font-mono text-[9px] uppercase tracking-widest text-accent/70">
-            {project.type}
-          </span>
-          <h3 className="font-display text-2xl sm:text-3xl font-medium text-text-primary mt-2">
-            {project.name}
-          </h3>
-          <p className="font-mono text-[10px] text-text-muted/60 mt-1">{project.company}</p>
-
-          <div className="flex flex-wrap gap-1.5 mt-4">
+        {/* Body — the only scrollable region */}
+        <div className="overflow-y-auto px-6 sm:px-8 py-6">
+          <div className="flex flex-wrap gap-1.5">
             {project.tags.map((tag) => (
               <span key={tag} className="tag-pill">{tag}</span>
             ))}
           </div>
-
-          {screenshots.length > 0 ? (
-            <div className="mt-6 grid grid-cols-1 gap-3">
-              {screenshots.map((src) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={src}
-                  src={src}
-                  alt={`${project.name} screenshot`}
-                  className="rounded-lg border border-border w-full"
-                />
-              ))}
-            </div>
-          ) : null}
 
           <div className="mt-6 space-y-5 text-[13px] text-text-muted leading-[1.7]">
             <section>
@@ -256,6 +247,33 @@ function CaseStudyModal({ project, onClose }) {
               <p>{caseStudy.result}</p>
             </section>
           </div>
+
+          {screenshots.length > 0 ? (
+            <div className="mt-6 pt-6 border-t border-border/60">
+              <h4 className="font-mono text-[10px] uppercase tracking-widest text-text-primary mb-3">
+                Screenshots
+              </h4>
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                {screenshots.map((src) => (
+                  <a
+                    key={src}
+                    href={src}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-lg border border-border overflow-hidden hover:border-accent/40 transition-colors"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src}
+                      alt={`${project.name} screenshot`}
+                      className="w-full aspect-[4/3] object-cover object-top"
+                      loading="lazy"
+                    />
+                  </a>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
