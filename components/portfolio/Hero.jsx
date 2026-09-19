@@ -101,7 +101,7 @@ export default function Hero({ onChatOpen }) {
             >
               <span className="accent-line" />
               <span className="font-mono text-xs text-text-muted tracking-wide">
-                Backend Developer · UI/UX Designer
+                Backend Developer · QA Automation
               </span>
             </div>
 

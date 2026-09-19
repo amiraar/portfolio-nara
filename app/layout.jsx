@@ -21,10 +21,10 @@ if (process.env.NODE_ENV !== "test") {
 export const metadata = {
   title: "Amirul — Software Developer",
   description:
-    "Portfolio of Mohammad Amirul Kurniawan Putranto — Backend Developer, UI/UX Designer, and AI Systems builder based in Yogyakarta.",
+    "Portfolio of Mohammad Amirul Kurniawan Putranto — backend developer and QA automation engineer based in Yogyakarta, building internal business tools and the automated tests that check them.",
   openGraph: {
     title: "Amirul — Software Developer",
-    description: "Backend Developer, UI/UX Designer, AI Systems",
+    description: "Backend Developer · QA Automation · Yogyakarta",
     type: "website",
   },
 };
