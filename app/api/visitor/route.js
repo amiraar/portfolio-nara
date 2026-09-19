@@ -45,7 +45,9 @@ export async function POST(req) {
     const body = await req.json();
     const { name, email } = body;
 
-    if (!name || !email) {
+    // Type check before any string method — a non-string body value would
+    // otherwise throw and surface as a 500 instead of a validation error.
+    if (typeof name !== "string" || typeof email !== "string" || !name.trim() || !email.trim()) {
       return NextResponse.json({ error: "name and email are required" }, { status: 400 });
     }
 
@@ -73,42 +75,59 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
     }
 
-    // Upsert visitor (create if new, return existing if not)
-    let visitor = await prisma.visitor.upsert({
-      where: { email: safeEmail },
-      create: { name: safeName, email: safeEmail, token: randomUUID() },
-      update: {}, // Do not overwrite name on return visit
-      include: {
-        conversations: {
-          where: { status: "active" },
-          orderBy: { updatedAt: "desc" },
-          take: 1,
-          include: {
-            messages: {
-              orderBy: { timestamp: "asc" },
-            },
-          },
-        },
-      },
-    });
+    // An email address is an unverified claim — anyone can type anyone's email.
+    // Prior conversation history is therefore only released to a caller that
+    // already holds the server-issued token for that visitor (same browser).
+    const presentedToken = req.cookies.get("visitor-token")?.value ?? null;
 
-    // Backfill token only for legacy visitors created before token support.
-    if (!visitor.token) {
-      const token = randomUUID();
-      await prisma.visitor.update({
-        where: { id: visitor.id },
-        data: { token },
+    let visitor = await prisma.visitor.findUnique({ where: { email: safeEmail } });
+    const isNewVisitor = !visitor;
+
+    if (!visitor) {
+      visitor = await prisma.visitor.create({
+        data: { name: safeName, email: safeEmail, token: randomUUID() },
       });
-      visitor = { ...visitor, token };
+    } else if (!visitor.token) {
+      // Backfill token only for legacy visitors created before token support.
+      visitor = await prisma.visitor.update({
+        where: { id: visitor.id },
+        data: { token: randomUUID() },
+      });
     }
 
-    // If no active conversation exists, create one
-    let conversation = visitor.conversations[0] ?? null;
-    if (!conversation) {
-      conversation = await prisma.conversation.create({
-        data: { visitorId: visitor.id },
-        include: { messages: true },
-      });
+    // Ownership is proven only by presenting the visitor's own token.
+    const ownershipProven =
+      isNewVisitor || (Boolean(presentedToken) && presentedToken === visitor.token);
+
+    let conversation;
+    if (ownershipProven) {
+      // Proven owner — resume the existing thread with its history.
+      conversation =
+        (await prisma.conversation.findFirst({
+          where: { visitorId: visitor.id, status: "active" },
+          orderBy: { updatedAt: "desc" },
+          include: { messages: { orderBy: { timestamp: "asc" } } },
+        })) ??
+        (await prisma.conversation.create({
+          data: { visitorId: visitor.id },
+          include: { messages: true },
+        }));
+    } else {
+      // Unproven claim on an existing email. Never hand back an existing
+      // thread — neither its messages nor its id, since the id plus the cookie
+      // would allow reading that history via /api/conversations/:id.
+      // Reuse an already-empty thread when one exists so repeated calls cannot
+      // flood the database; an empty thread has no history to disclose.
+      conversation =
+        (await prisma.conversation.findFirst({
+          where: { visitorId: visitor.id, status: "active", messages: { none: {} } },
+          orderBy: { updatedAt: "desc" },
+          include: { messages: true },
+        })) ??
+        (await prisma.conversation.create({
+          data: { visitorId: visitor.id },
+          include: { messages: true },
+        }));
     }
 
     // Issue HttpOnly cookie so the server can verify visitor identity on /api/chat
@@ -122,7 +141,18 @@ export async function POST(req) {
       ...(isProd ? ["Secure"] : []),
     ].join("; ");
 
-    const response = NextResponse.json({ visitor, conversation });
+    // Never return the token in the body. It is a 30-day bearer credential for
+    // /api/chat, /api/conversations/:id and /api/pusher/auth; the client stores
+    // this object in localStorage, so including it would put the credential
+    // within reach of any script on the page and defeat the HttpOnly cookie.
+    const safeVisitor = {
+      id: visitor.id,
+      name: visitor.name,
+      email: visitor.email,
+      createdAt: visitor.createdAt,
+    };
+
+    const response = NextResponse.json({ visitor: safeVisitor, conversation });
     response.headers.set("Set-Cookie", cookieAttributes);
     return response;
   } catch (error) {
