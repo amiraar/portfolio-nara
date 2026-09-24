@@ -80,60 +80,35 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
     }
 
-<<<<<<< HEAD
-    // Upsert visitor (create if new, return existing if not)
-    let visitor = await prisma.visitor.upsert({
-      where: { email: safeEmail },
-      create: { name: safeName, email: safeEmail, token: randomUUID(), consentAt: new Date() },
-      update: { consentAt: new Date() }, // Do not overwrite name on return visit
-    });
-=======
     // An email address is an unverified claim — anyone can type anyone's email.
     // Prior conversation history is therefore only released to a caller that
     // already holds the server-issued token for that visitor (same browser).
     const presentedToken = req.cookies.get("visitor-token")?.value ?? null;
->>>>>>> ac126ffb782dcf8cfd4934a50be1794cdd70c1e5
 
     let visitor = await prisma.visitor.findUnique({ where: { email: safeEmail } });
     const isNewVisitor = !visitor;
 
-    if (!visitor) {
-      visitor = await prisma.visitor.create({
-        data: { name: safeName, email: safeEmail, token: randomUUID() },
-      });
-    } else if (!visitor.token) {
-      // Backfill token only for legacy visitors created before token support.
-      visitor = await prisma.visitor.update({
-        where: { id: visitor.id },
-        data: { token: randomUUID() },
-      });
-    }
-
-<<<<<<< HEAD
-    // Knowing an email address is not proof of identity. Only a request that
-    // already carries this visitor's HttpOnly token may resume their existing
-    // conversation; anyone else gets a fresh, empty one so prior history is
-    // never disclosed to whoever typed the email.
-    const requestToken = req.cookies?.get("visitor-token")?.value;
-    const isKnownDevice = Boolean(requestToken) && requestToken === visitor.token;
-
-    let conversation = isKnownDevice
-      ? await prisma.conversation.findFirst({
-          where: { visitorId: visitor.id, status: "active" },
-          orderBy: { updatedAt: "desc" },
-          include: { messages: { orderBy: { timestamp: "asc" } } },
-        })
-      : null;
-
-    if (!conversation) {
-      conversation = await prisma.conversation.create({
-        data: { visitorId: visitor.id },
-        include: { messages: true },
-      });
-=======
     // Ownership is proven only by presenting the visitor's own token.
     const ownershipProven =
       isNewVisitor || (Boolean(presentedToken) && presentedToken === visitor.token);
+
+    if (!visitor) {
+      visitor = await prisma.visitor.create({
+        data: { name: safeName, email: safeEmail, token: randomUUID(), consentAt: new Date() },
+      });
+    } else {
+      // Consent timestamp is refreshed on every visit (UU PDP evidence). An
+      // unproven claim also rotates the token: the caller must never receive
+      // the existing one, or it could read any thread the real visitor uses
+      // next. Rotation logs out the previous holder; that is the safe failure.
+      visitor = await prisma.visitor.update({
+        where: { id: visitor.id },
+        data: {
+          consentAt: new Date(),
+          ...(ownershipProven ? {} : { token: randomUUID() }),
+        },
+      });
+    }
 
     let conversation;
     if (ownershipProven) {
@@ -164,7 +139,6 @@ export async function POST(req) {
           data: { visitorId: visitor.id },
           include: { messages: true },
         }));
->>>>>>> ac126ffb782dcf8cfd4934a50be1794cdd70c1e5
     }
 
     // Issue HttpOnly cookie so the server can verify visitor identity on /api/chat
@@ -178,27 +152,14 @@ export async function POST(req) {
       ...(isProd ? ["Secure"] : []),
     ].join("; ");
 
-<<<<<<< HEAD
-    // Never expose the token in the JSON body — it lives only in the HttpOnly cookie.
+    // Never return the token in the body. It is a 30-day bearer credential for
+    // /api/chat, /api/conversations/:id and /api/pusher/auth; it lives only in
+    // the HttpOnly cookie, out of reach of page scripts.
     const publicVisitor = Object.fromEntries(
       Object.keys(PUBLIC_VISITOR_SELECT).map((key) => [key, visitor[key]])
     );
 
     const response = NextResponse.json({ visitor: publicVisitor, conversation });
-=======
-    // Never return the token in the body. It is a 30-day bearer credential for
-    // /api/chat, /api/conversations/:id and /api/pusher/auth; the client stores
-    // this object in localStorage, so including it would put the credential
-    // within reach of any script on the page and defeat the HttpOnly cookie.
-    const safeVisitor = {
-      id: visitor.id,
-      name: visitor.name,
-      email: visitor.email,
-      createdAt: visitor.createdAt,
-    };
-
-    const response = NextResponse.json({ visitor: safeVisitor, conversation });
->>>>>>> ac126ffb782dcf8cfd4934a50be1794cdd70c1e5
     response.headers.set("Set-Cookie", cookieAttributes);
     return response;
   } catch (error) {
