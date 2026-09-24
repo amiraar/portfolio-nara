@@ -17,6 +17,8 @@ model Visitor {
   email         String         @unique
   /// Server-issued token stored in HttpOnly cookie for ownership verification
   token         String?        @unique
+  /// When the visitor last gave explicit consent to data processing (UU PDP evidence)
+  consentAt     DateTime?
   createdAt     DateTime       @default(now())
   conversations Conversation[]
 }

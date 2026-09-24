@@ -7,7 +7,15 @@
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
-import { requireOwnerSession, unauthorizedResponse, getClientIP } from "@/lib/apiRouteUtils";
+import {
+  auditLog,
+  forbiddenResponse,
+  getClientIP,
+  isTrustedOrigin,
+  PUBLIC_VISITOR_SELECT,
+  requireOwnerSession,
+  unauthorizedResponse,
+} from "@/lib/apiRouteUtils";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 /**
@@ -51,7 +59,7 @@ export async function GET(req, { params }) {
     const conversation = await prisma.conversation.findUnique({
       where: { id },
       include: {
-        visitor: true,
+        visitor: { select: PUBLIC_VISITOR_SELECT },
         messages: { orderBy: { timestamp: "asc" } },
       },
     });
@@ -90,10 +98,8 @@ export async function PATCH(req, { params }) {
       return unauthorizedResponse();
     }
 
-    const origin = req.headers.get("origin");
-    const allowed = process.env.NEXTAUTH_URL;
-    if (!origin || !allowed || !origin.startsWith(allowed)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!isTrustedOrigin(req)) {
+      return forbiddenResponse();
     }
 
     const { id } = params;
@@ -116,6 +122,8 @@ export async function PATCH(req, { params }) {
       where: { id },
       data: { status },
     });
+
+    auditLog(session, "conversation.status_change", { conversationId: id, status });
 
     return NextResponse.json({ conversation });
   } catch (error) {

@@ -8,7 +8,13 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { emitConversationEvent } from "@/lib/pusher";
-import { requireOwnerSession, unauthorizedResponse } from "@/lib/apiRouteUtils";
+import {
+  auditLog,
+  forbiddenResponse,
+  isTrustedOrigin,
+  requireOwnerSession,
+  unauthorizedResponse,
+} from "@/lib/apiRouteUtils";
 
 /**
  * Toggle conversation mode between AI and human takeover.
@@ -22,10 +28,8 @@ export async function PATCH(req) {
       return unauthorizedResponse();
     }
 
-    const origin = req.headers.get("origin");
-    const allowed = process.env.NEXTAUTH_URL;
-    if (!origin || !allowed || !origin.startsWith(allowed)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!isTrustedOrigin(req)) {
+      return forbiddenResponse();
     }
 
     const body = await req.json();
@@ -54,6 +58,8 @@ export async function PATCH(req) {
       where: { id: conversationId },
       data: { mode },
     });
+
+    auditLog(session, "conversation.mode_change", { conversationId, mode });
 
     // Notify all parties about mode change via Pusher
     await emitConversationEvent(conversationId, "mode_changed", {

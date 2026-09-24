@@ -15,10 +15,13 @@ import prisma from "@/lib/prisma";
 import { getKaiaReply } from "@/lib/gemini";
 import { checkMultiRateLimit } from "@/lib/rateLimit";
 import pusher, { emitConversationEvent } from "@/lib/pusher";
-import { touchConversation } from "@/lib/apiRouteUtils";
+import { getClientIP, touchConversation, PUBLIC_VISITOR_SELECT } from "@/lib/apiRouteUtils";
 
 /** Maximum allowed message length (characters). */
 const MAX_CONTENT_LENGTH = 1000;
+
+/** Messages per IP per day across all visitor identities. */
+const CHAT_IP_DAILY_LIMIT = 30;
 
 /** Fallback reply shown to visitors when Gemini is unavailable. */
 const AI_FALLBACK_MESSAGE =
@@ -119,6 +122,28 @@ export async function POST(req) {
       { maxRequests: 4,  windowSec: 60,          scope: "chat:rpm" },  // 4/min  (Gemini free: 5 RPM)
       { maxRequests: 15, windowSec: 24 * 60 * 60, scope: "chat:rpd" }, // 15/day (Gemini free: 20 RPD)
     ]);
+
+    // Per-IP daily ceiling: visitor limits alone can be multiplied by registering
+    // many email addresses, each of which would get its own Gemini quota.
+    const ipLimit = allowed
+      ? await checkMultiRateLimit(`ip:${getClientIP(req)}`, [
+          { maxRequests: CHAT_IP_DAILY_LIMIT, windowSec: 24 * 60 * 60, scope: "chat:ip-rpd" },
+        ])
+      : null;
+    if (ipLimit && !ipLimit.allowed) {
+      return withCorrelation(NextResponse.json(
+        { error: "Batas pesan harian tercapai. Coba lagi besok." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(ipLimit.retryAfter),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Window": "day",
+          },
+        }
+      ), correlationId);
+    }
+
     if (!allowed) {
       const isDaily = limitedBy === "chat:rpd";
       const errorMsg = isDaily
@@ -142,7 +167,7 @@ export async function POST(req) {
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
       include: {
-        visitor: true,
+        visitor: { select: PUBLIC_VISITOR_SELECT },
         messages: { orderBy: { timestamp: "asc" } },
       },
     });

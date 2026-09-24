@@ -36,6 +36,7 @@ vi.mock("@/lib/pusher", () => ({
 vi.mock("@/lib/apiRouteUtils", () => ({
   touchConversation: vi.fn(),
   getClientIP: vi.fn(() => "127.0.0.1"),
+  PUBLIC_VISITOR_SELECT: { id: true, name: true, email: true, createdAt: true },
 }));
 
 // ─── Imports (after mocks are registered) ─────────────────────────────────────

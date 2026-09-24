@@ -9,11 +9,17 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import { emitConversationEvent } from "@/lib/pusher";
 import {
+  auditLog,
   findConversation,
+  forbiddenResponse,
+  isTrustedOrigin,
   requireOwnerSession,
   touchConversation,
   unauthorizedResponse,
 } from "@/lib/apiRouteUtils";
+
+/** Maximum allowed owner reply length (characters). */
+const MAX_CONTENT_LENGTH = 2000;
 
 /**
  * Save an owner message and broadcast it to visitor + dashboard channels.
@@ -27,10 +33,8 @@ export async function POST(req) {
       return unauthorizedResponse();
     }
 
-    const origin = req.headers.get("origin");
-    const allowed = process.env.NEXTAUTH_URL;
-    if (!origin || !allowed || !origin.startsWith(allowed)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!isTrustedOrigin(req)) {
+      return forbiddenResponse();
     }
 
     const body = await req.json();
@@ -39,6 +43,13 @@ export async function POST(req) {
     if (!conversationId || !content?.trim()) {
       return NextResponse.json(
         { error: "conversationId and content are required" },
+        { status: 400 }
+      );
+    }
+
+    if (content.trim().length > MAX_CONTENT_LENGTH) {
+      return NextResponse.json(
+        { error: `Message too long. Maximum ${MAX_CONTENT_LENGTH} characters allowed.` },
         { status: 400 }
       );
     }
@@ -58,6 +69,8 @@ export async function POST(req) {
         content: content.trim(),
       },
     });
+
+    auditLog(session, "conversation.owner_reply", { conversationId, messageId: message.id });
 
     // Update conversation timestamp
     await touchConversation(conversationId);

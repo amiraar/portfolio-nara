@@ -13,6 +13,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { PUBLIC_VISITOR_SELECT } from "@/lib/apiRouteUtils";
 
 const PAGE_SIZE = 20;
 
@@ -46,7 +47,7 @@ export async function GET(req) {
       where: visitorFilter,
       orderBy: { updatedAt: "desc" },
       include: {
-        visitor: true,
+        visitor: { select: PUBLIC_VISITOR_SELECT },
         messages: {
           orderBy: { timestamp: "desc" },
           take: 1, // Latest message preview

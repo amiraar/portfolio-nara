@@ -1,6 +1,6 @@
 /**
  * components/chat/VisitorForm.jsx — Collect visitor name + email before chat starts.
- * Shown only once; subsequent visits load history directly via localStorage cache.
+ * Shown only once; subsequent visits resume via the stored conversation id + HttpOnly cookie.
  */
 
 "use client";
@@ -17,6 +17,8 @@ export default function VisitorForm({ onSubmit }) {
   const [error, setError] = useState("");
   const [nameError, setNameError] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [consentError, setConsentError] = useState("");
 
   /** Validate any valid email address (not restricted to Gmail). */
   function isValidEmail(value) {
@@ -40,28 +42,28 @@ export default function VisitorForm({ onSubmit }) {
     setError("");
     const ne = validateName(name);
     const ee = validateEmail(email);
+    const ce = consent ? "" : "Centang persetujuan untuk melanjutkan.";
     setNameError(ne);
     setEmailError(ee);
-    if (ne || ee) return;
+    setConsentError(ce);
+    if (ne || ee || ce) return;
 
     setLoading(true);
     try {
       const res = await fetch("/api/visitor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), email: email.trim() }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), consent: true }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start chat");
 
-      // Persist to localStorage so we don't show the form again this session
+      // Persist only the conversation id — no name/email (PII) in browser storage.
+      // Identity is proven by the HttpOnly visitor-token cookie.
       localStorage.setItem(
         "nara_visitor",
-        JSON.stringify({
-          visitor: data.visitor,
-          conversationId: data.conversation.id,
-        })
+        JSON.stringify({ conversationId: data.conversation.id })
       );
 
       onSubmit(data.visitor, data.conversation);
@@ -126,6 +128,29 @@ export default function VisitorForm({ onSubmit }) {
           {emailError && <p className="text-[11px] text-red-400 pl-1">{emailError}</p>}
         </div>
 
+        {/* Consent (UU PDP): explicit, never pre-checked */}
+        <div className="flex flex-col gap-1">
+          <label className="flex items-start gap-2 text-[11px] leading-relaxed text-text-muted cursor-pointer">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => { setConsent(e.target.checked); if (e.target.checked) setConsentError(""); }}
+              disabled={loading}
+              className="mt-0.5 accent-accent flex-shrink-0"
+            />
+            <span>
+              Saya setuju nama, email, dan isi chat saya disimpan untuk membalas pesan ini, dan pesan
+              diproses oleh Google Gemini AI. Data hanya disimpan selama diperlukan; minta penghapusan
+              kapan saja ke{" "}
+              <a href="mailto:amrlkurniawn19@gmail.com" className="text-accent/80 hover:underline">
+                amrlkurniawn19@gmail.com
+              </a>
+              .
+            </span>
+          </label>
+          {consentError && <p className="text-[11px] text-red-400 pl-1">{consentError}</p>}
+        </div>
+
         {error && (
           <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0">
@@ -138,7 +163,7 @@ export default function VisitorForm({ onSubmit }) {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !consent}
           className="w-full bg-accent text-background font-sans font-medium text-sm rounded-lg py-2.5 hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {loading ? (

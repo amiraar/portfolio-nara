@@ -2,6 +2,7 @@
  * app/api/portfolio/route.js
  * GET  /api/portfolio?section=xxx → public, returns one section's data
  * GET  /api/portfolio             → public, returns all sections as { [section]: data }
+ *   Private sections (kaia_config — the AI system prompt) are only returned to the owner.
  * PATCH /api/portfolio            → protected (owner only), upsert section data
  */
 
@@ -9,13 +10,24 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { auditLog, forbiddenResponse, isTrustedOrigin } from "@/lib/apiRouteUtils";
+
+/** Sections that hold owner-only configuration and must never be served publicly. */
+const PRIVATE_SECTIONS = ["kaia_config"];
 
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
     const section = searchParams.get("section");
 
+    // Only pay for a session lookup when a private section could be returned.
+    const needsOwner = !section || PRIVATE_SECTIONS.includes(section);
+    const isOwner = needsOwner ? Boolean(await getServerSession(authOptions)) : false;
+
     if (section) {
+      if (PRIVATE_SECTIONS.includes(section) && !isOwner) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
       const content = await prisma.portfolioContent.findUnique({
         where: { section },
       });
@@ -25,6 +37,7 @@ export async function GET(req) {
     const all = await prisma.portfolioContent.findMany();
     const result = {};
     for (const item of all) {
+      if (PRIVATE_SECTIONS.includes(item.section) && !isOwner) continue;
       result[item.section] = item.data;
     }
     return NextResponse.json({ content: result });
@@ -39,6 +52,10 @@ export async function PATCH(req) {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!isTrustedOrigin(req)) {
+      return forbiddenResponse();
     }
 
     const body = await req.json();
@@ -74,6 +91,8 @@ export async function PATCH(req) {
       update: { data },
       create: { section, data },
     });
+
+    auditLog(session, "portfolio.update", { section });
 
     return NextResponse.json({ content });
   } catch (error) {

@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import prisma from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { getClientIP } from "@/lib/apiRouteUtils";
+import { getClientIP, PUBLIC_VISITOR_SELECT } from "@/lib/apiRouteUtils";
 
 const MAX_NAME_LENGTH = 100;
 const MAX_EMAIL_LENGTH = 200;
@@ -43,10 +43,15 @@ export async function POST(req) {
     }
 
     const body = await req.json();
-    const { name, email } = body;
+    const { name, email, consent } = body;
 
     if (!name || !email) {
       return NextResponse.json({ error: "name and email are required" }, { status: 400 });
+    }
+
+    // Explicit consent is required and its timestamp is stored as evidence (UU PDP).
+    if (consent !== true) {
+      return NextResponse.json({ error: "Consent is required" }, { status: 400 });
     }
 
     // --- Input length validation ---
@@ -76,20 +81,8 @@ export async function POST(req) {
     // Upsert visitor (create if new, return existing if not)
     let visitor = await prisma.visitor.upsert({
       where: { email: safeEmail },
-      create: { name: safeName, email: safeEmail, token: randomUUID() },
-      update: {}, // Do not overwrite name on return visit
-      include: {
-        conversations: {
-          where: { status: "active" },
-          orderBy: { updatedAt: "desc" },
-          take: 1,
-          include: {
-            messages: {
-              orderBy: { timestamp: "asc" },
-            },
-          },
-        },
-      },
+      create: { name: safeName, email: safeEmail, token: randomUUID(), consentAt: new Date() },
+      update: { consentAt: new Date() }, // Do not overwrite name on return visit
     });
 
     // Backfill token only for legacy visitors created before token support.
@@ -102,8 +95,21 @@ export async function POST(req) {
       visitor = { ...visitor, token };
     }
 
-    // If no active conversation exists, create one
-    let conversation = visitor.conversations[0] ?? null;
+    // Knowing an email address is not proof of identity. Only a request that
+    // already carries this visitor's HttpOnly token may resume their existing
+    // conversation; anyone else gets a fresh, empty one so prior history is
+    // never disclosed to whoever typed the email.
+    const requestToken = req.cookies?.get("visitor-token")?.value;
+    const isKnownDevice = Boolean(requestToken) && requestToken === visitor.token;
+
+    let conversation = isKnownDevice
+      ? await prisma.conversation.findFirst({
+          where: { visitorId: visitor.id, status: "active" },
+          orderBy: { updatedAt: "desc" },
+          include: { messages: { orderBy: { timestamp: "asc" } } },
+        })
+      : null;
+
     if (!conversation) {
       conversation = await prisma.conversation.create({
         data: { visitorId: visitor.id },
@@ -122,7 +128,12 @@ export async function POST(req) {
       ...(isProd ? ["Secure"] : []),
     ].join("; ");
 
-    const response = NextResponse.json({ visitor, conversation });
+    // Never expose the token in the JSON body — it lives only in the HttpOnly cookie.
+    const publicVisitor = Object.fromEntries(
+      Object.keys(PUBLIC_VISITOR_SELECT).map((key) => [key, visitor[key]])
+    );
+
+    const response = NextResponse.json({ visitor: publicVisitor, conversation });
     response.headers.set("Set-Cookie", cookieAttributes);
     return response;
   } catch (error) {

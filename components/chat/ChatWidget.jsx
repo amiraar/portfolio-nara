@@ -157,28 +157,19 @@ export default function ChatWidget() {
     if (stored) {
       (async () => {
         try {
-          const { visitor: v, conversationId } = JSON.parse(stored);
-          setVisitor(v);
+          const { visitor: legacyVisitor, conversationId } = JSON.parse(stored);
+          if (!conversationId) throw new Error("No conversation id stored");
+
+          // Older versions also stored name/email (and a token) here. Rewrite the
+          // entry so no personal data stays in browser storage.
+          if (legacyVisitor) {
+            localStorage.setItem("nara_visitor", JSON.stringify({ conversationId }));
+          }
           setHasSession(true);
 
-          // Await cookie re-issue before fetching the conversation — the
-          // conversation endpoint requires the HttpOnly visitor-token cookie.
-          // If the cookie was cleared (different device, cleared browser data),
-          // the fetch below would return 401 without this step.
-          if (v?.email && v?.name) {
-            try {
-              await fetch("/api/visitor", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: v.name, email: v.email }),
-              });
-            } catch {
-              // Cookie refresh failed — best-effort; the conversation fetch
-              // may still succeed if the cookie is present.
-            }
-          }
-
-          // Load conversation from server (cookie is now set)
+          // The HttpOnly visitor-token cookie proves identity. If it is gone
+          // (expired or cleared), the endpoint returns 401 and the visitor
+          // simply fills in the form again.
           try {
             const r = await fetch(`/api/conversations/${conversationId}`);
             if (r.status === 401 || r.status === 403) {
@@ -300,20 +291,10 @@ export default function ChatWidget() {
 
       async function refreshVisitorCookie() {
         try {
-          const visitorPayload =
-            visitor?.name && visitor?.email
-              ? { name: visitor.name, email: visitor.email }
-              : (() => {
-                const stored = window.localStorage.getItem("nara_visitor");
-                if (!stored) return null;
-                const parsed = JSON.parse(stored);
-                const name = parsed?.visitor?.name;
-                const email = parsed?.visitor?.email;
-                if (!name || !email) return null;
-                return { name, email };
-              })();
-
-          if (!visitorPayload) return false;
+          // Only possible within the session where the visitor filled in the
+          // form (and gave consent); name/email are never read from storage.
+          if (!visitor?.name || !visitor?.email) return false;
+          const visitorPayload = { name: visitor.name, email: visitor.email, consent: true };
 
           const cookieRes = await fetch("/api/visitor", {
             method: "POST",
