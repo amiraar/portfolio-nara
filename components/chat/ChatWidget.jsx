@@ -107,7 +107,6 @@ export default function ChatWidget() {
   /** @type {["hidden"|"bubble"|"open"]} */
   const [widgetState, setWidgetState] = useState("hidden");
   const [hasSession, setHasSession] = useState(false);
-  const [visitor, setVisitor] = useState(null);
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
@@ -115,6 +114,7 @@ export default function ChatWidget() {
   const [sendError, setSendError] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [sessionNotice, setSessionNotice] = useState(null);
   const handleSendRef = useRef(null);
   const widgetStateRef = useRef(widgetState);
   const seenEventKeysRef = useRef(new Set());
@@ -175,7 +175,6 @@ export default function ChatWidget() {
             if (r.status === 401 || r.status === 403 || r.status === 404) {
               localStorage.removeItem("nara_visitor");
               setHasSession(false);
-              setVisitor(null);
               return;
             }
             const { conversation: c } = await r.json();
@@ -275,11 +274,11 @@ export default function ChatWidget() {
   }, [conversation?.id]);
 
   /** Called when VisitorForm submits successfully */
-  function handleVisitorSubmit(v, conv) {
-    setVisitor(v);
+  function handleVisitorSubmit(_visitor, conv) {
     setConversation(conv);
     setMessages(conv.messages || []);
     setHasSession(true);
+    setSessionNotice(null);
   }
 
   /** Send a visitor message */
@@ -289,27 +288,8 @@ export default function ChatWidget() {
       setSendError(null);
       setSending(true);
 
-      async function refreshVisitorCookie() {
-        try {
-          // Only possible within the session where the visitor filled in the
-          // form (and gave consent); name/email are never read from storage.
-          if (!visitor?.name || !visitor?.email) return false;
-          const visitorPayload = { name: visitor.name, email: visitor.email, consent: true };
-
-          const cookieRes = await fetch("/api/visitor", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(visitorPayload),
-          });
-
-          return cookieRes.ok;
-        } catch {
-          return false;
-        }
-      }
-
-      async function sendChatRequest(clientTempId, retriedAuth = false) {
-        const response = await fetch("/api/chat", {
+      function sendChatRequest(clientTempId) {
+        return fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -318,15 +298,6 @@ export default function ChatWidget() {
             clientTempId,
           }),
         });
-
-        if ((response.status === 401 || response.status === 403) && !retriedAuth) {
-          const refreshed = await refreshVisitorCookie();
-          if (refreshed) {
-            return sendChatRequest(clientTempId, true);
-          }
-        }
-
-        return response;
       }
 
       // Optimistic UI: add visitor message immediately
@@ -343,6 +314,16 @@ export default function ChatWidget() {
 
       try {
         const res = await sendChatRequest(clientTempId);
+
+        // Token cookie missing or expired. Identity is never re-established
+        // silently (that would also re-submit consent on the visitor's behalf):
+        // return to the form so the visitor starts a new session explicitly.
+        if (res.status === 401) {
+          handleReset();
+          setSessionNotice("Sesi chat berakhir. Isi form lagi untuk melanjutkan.");
+          return;
+        }
+
         const data = await res.json();
 
         if (!res.ok) {
@@ -378,7 +359,7 @@ export default function ChatWidget() {
         setSending(false);
       }
     },
-    [conversation?.id, sending, visitor?.email, visitor?.name]
+    [conversation?.id, sending]
   );
 
   useEffect(() => {
@@ -397,7 +378,6 @@ export default function ChatWidget() {
 
   function handleReset() {
     localStorage.removeItem("nara_visitor");
-    setVisitor(null);
     setConversation(null);
     setMessages([]);
     setHasSession(false);
@@ -499,7 +479,14 @@ export default function ChatWidget() {
               <MessageInput onSend={handleSend} disabled={sending} />
             </>
           ) : (
-            <VisitorForm onSubmit={handleVisitorSubmit} />
+            <>
+              {sessionNotice && (
+                <p className="mx-5 mt-4 -mb-1 px-3 py-2 text-[11px] text-text-muted bg-accent/6 border border-border rounded-lg leading-snug">
+                  {sessionNotice}
+                </p>
+              )}
+              <VisitorForm onSubmit={handleVisitorSubmit} />
+            </>
           )}
         </div>
       )}

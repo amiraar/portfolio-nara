@@ -9,6 +9,7 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import {
   auditLog,
+  findVisitorByToken,
   forbiddenResponse,
   getClientIP,
   isTrustedOrigin,
@@ -49,7 +50,7 @@ export async function GET(req, { params }) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
 
-      const tokenOwner = await prisma.visitor.findUnique({ where: { token: visitorToken } });
+      const tokenOwner = await findVisitorByToken(visitorToken);
       if (!tokenOwner) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }

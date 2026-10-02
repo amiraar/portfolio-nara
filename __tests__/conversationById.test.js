@@ -26,6 +26,7 @@ vi.mock("@/lib/rateLimit", () => ({
 
 vi.mock("@/lib/apiRouteUtils", () => ({
   auditLog: vi.fn(),
+  findVisitorByToken: vi.fn((token) => (token ? prisma.visitor.findUnique() : null)),
   forbiddenResponse: vi.fn(() => Response.json({ error: "Forbidden" }, { status: 403 })),
   getClientIP: vi.fn(() => "127.0.0.1"),
   isTrustedOrigin: vi.fn(() => true),

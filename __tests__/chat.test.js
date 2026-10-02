@@ -34,6 +34,9 @@ vi.mock("@/lib/pusher", () => ({
 }));
 
 vi.mock("@/lib/apiRouteUtils", () => ({
+  // Token hashing/expiry is covered in apiRouteUtils.test.js; here the lookup
+  // is delegated to the prisma mock so tests can control the resolved visitor.
+  findVisitorByToken: vi.fn((token) => (token ? prisma.visitor.findUnique() : null)),
   touchConversation: vi.fn(),
   getClientIP: vi.fn(() => "127.0.0.1"),
   PUBLIC_VISITOR_SELECT: { id: true, name: true, email: true, createdAt: true },

@@ -14,13 +14,20 @@ datasource db {
 model Visitor {
   id            String         @id @default(cuid())
   name          String
-  email         String         @unique
-  /// Server-issued token stored in HttpOnly cookie for ownership verification
+  /// Unverified, self-reported contact address. Not an identity key: several
+  /// Visitor rows may share one email (identity is the cookie token only).
+  email         String
+  /// SHA-256 hex of the server-issued token. The raw token lives only in the
+  /// visitor's HttpOnly cookie, so a database leak does not yield usable tokens.
   token         String?        @unique
+  /// Server-side expiry of `token` (mirrors the cookie Max-Age).
+  tokenExpiresAt DateTime?
   /// When the visitor last gave explicit consent to data processing (UU PDP evidence)
   consentAt     DateTime?
   createdAt     DateTime       @default(now())
   conversations Conversation[]
+
+  @@index([email])
 }
 
 model Conversation {

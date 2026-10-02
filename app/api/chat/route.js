@@ -15,7 +15,12 @@ import prisma from "@/lib/prisma";
 import { getKaiaReply } from "@/lib/gemini";
 import { checkMultiRateLimit } from "@/lib/rateLimit";
 import pusher, { emitConversationEvent } from "@/lib/pusher";
-import { getClientIP, touchConversation, PUBLIC_VISITOR_SELECT } from "@/lib/apiRouteUtils";
+import {
+  findVisitorByToken,
+  getClientIP,
+  touchConversation,
+  PUBLIC_VISITOR_SELECT,
+} from "@/lib/apiRouteUtils";
 
 /** Maximum allowed message length (characters). */
 const MAX_CONTENT_LENGTH = 1000;
@@ -88,8 +93,8 @@ export async function POST(req) {
       ), correlationId);
     }
 
-    // Resolve visitor from the signed server-issued token
-    const tokenOwner = await prisma.visitor.findUnique({ where: { token: visitorToken } });
+    // Resolve visitor from the server-issued token (hashed lookup, expiry enforced)
+    const tokenOwner = await findVisitorByToken(visitorToken);
     console.info("[chat] Cookie owner lookup", {
       correlationId,
       resolved: Boolean(tokenOwner),

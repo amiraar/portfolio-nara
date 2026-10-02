@@ -1,13 +1,24 @@
 /**
- * app/api/visitor/route.js — Create or retrieve a Visitor by email.
- * POST { name, email } → returns { visitor, conversation }
+ * app/api/visitor/route.js — Start or resume a visitor chat session.
+ * POST { name, email, consent } → returns { visitor, conversation }
+ *
+ * Identity is the server-issued token in the HttpOnly `visitor-token` cookie,
+ * never the email address. An email is an unverified claim — anyone can type
+ * anyone's — so it is stored as contact information only and is never used to
+ * look up, resume, or modify an existing visitor.
  */
 
 import { NextResponse } from "next/server";
-import { randomUUID } from "crypto";
 import prisma from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { getClientIP, PUBLIC_VISITOR_SELECT } from "@/lib/apiRouteUtils";
+import {
+  findVisitorByToken,
+  getClientIP,
+  issueVisitorToken,
+  PUBLIC_VISITOR_SELECT,
+  VISITOR_TOKEN_TTL_SEC,
+  visitorTokenCookie,
+} from "@/lib/apiRouteUtils";
 
 const MAX_NAME_LENGTH = 100;
 const MAX_EMAIL_LENGTH = 200;
@@ -23,7 +34,8 @@ function sanitizeText(str) {
 }
 
 /**
- * Upsert a visitor identity and return/seed their active conversation.
+ * Resume the cookie holder's visitor, or create a new visitor, and return the
+ * active conversation.
  * @param {Request} req
  * @returns {Promise<import("next/server").NextResponse>}
  */
@@ -80,39 +92,24 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
     }
 
-    // An email address is an unverified claim — anyone can type anyone's email.
-    // Prior conversation history is therefore only released to a caller that
-    // already holds the server-issued token for that visitor (same browser).
     const presentedToken = req.cookies.get("visitor-token")?.value ?? null;
+    const existing = await findVisitorByToken(presentedToken);
 
-    let visitor = await prisma.visitor.findUnique({ where: { email: safeEmail } });
-    const isNewVisitor = !visitor;
+    let visitor;
+    let rawToken;
+    let conversation;
 
-    // Ownership is proven only by presenting the visitor's own token.
-    const ownershipProven =
-      isNewVisitor || (Boolean(presentedToken) && presentedToken === visitor.token);
-
-    if (!visitor) {
-      visitor = await prisma.visitor.create({
-        data: { name: safeName, email: safeEmail, token: randomUUID(), consentAt: new Date() },
-      });
-    } else {
-      // Consent timestamp is refreshed on every visit (UU PDP evidence). An
-      // unproven claim also rotates the token: the caller must never receive
-      // the existing one, or it could read any thread the real visitor uses
-      // next. Rotation logs out the previous holder; that is the safe failure.
+    if (existing) {
+      // Same browser, valid token: resume. Refresh the consent timestamp (UU PDP
+      // evidence) and slide the token expiry; the token value itself is kept.
+      rawToken = presentedToken;
       visitor = await prisma.visitor.update({
-        where: { id: visitor.id },
+        where: { id: existing.id },
         data: {
           consentAt: new Date(),
-          ...(ownershipProven ? {} : { token: randomUUID() }),
+          tokenExpiresAt: new Date(Date.now() + VISITOR_TOKEN_TTL_SEC * 1000),
         },
       });
-    }
-
-    let conversation;
-    if (ownershipProven) {
-      // Proven owner — resume the existing thread with its history.
       conversation =
         (await prisma.conversation.findFirst({
           where: { visitorId: visitor.id, status: "active" },
@@ -124,35 +121,26 @@ export async function POST(req) {
           include: { messages: true },
         }));
     } else {
-      // Unproven claim on an existing email. Never hand back an existing
-      // thread — neither its messages nor its id, since the id plus the cookie
-      // would allow reading that history via /api/conversations/:id.
-      // Reuse an already-empty thread when one exists so repeated calls cannot
-      // flood the database; an empty thread has no history to disclose.
-      conversation =
-        (await prisma.conversation.findFirst({
-          where: { visitorId: visitor.id, status: "active", messages: { none: {} } },
-          orderBy: { updatedAt: "desc" },
-          include: { messages: true },
-        })) ??
-        (await prisma.conversation.create({
-          data: { visitorId: visitor.id },
-          include: { messages: true },
-        }));
+      // No valid token: always a new visitor, even if this email was used before.
+      // Other visitors' rows, tokens, consent records and threads are untouched.
+      const token = issueVisitorToken();
+      rawToken = token.raw;
+      visitor = await prisma.visitor.create({
+        data: {
+          name: safeName,
+          email: safeEmail,
+          token: token.hash,
+          tokenExpiresAt: token.expiresAt,
+          consentAt: new Date(),
+        },
+      });
+      conversation = await prisma.conversation.create({
+        data: { visitorId: visitor.id },
+        include: { messages: true },
+      });
     }
 
-    // Issue HttpOnly cookie so the server can verify visitor identity on /api/chat
-    const isProd = process.env.NODE_ENV === "production";
-    const cookieAttributes = [
-      `visitor-token=${visitor.token}`,
-      "HttpOnly",
-      "SameSite=Strict",
-      "Path=/",
-      "Max-Age=2592000", // 30 days
-      ...(isProd ? ["Secure"] : []),
-    ].join("; ");
-
-    // Never return the token in the body. It is a 30-day bearer credential for
+    // Never return the token in the body. It is a bearer credential for
     // /api/chat, /api/conversations/:id and /api/pusher/auth; it lives only in
     // the HttpOnly cookie, out of reach of page scripts.
     const publicVisitor = Object.fromEntries(
@@ -160,7 +148,7 @@ export async function POST(req) {
     );
 
     const response = NextResponse.json({ visitor: publicVisitor, conversation });
-    response.headers.set("Set-Cookie", cookieAttributes);
+    response.headers.set("Set-Cookie", visitorTokenCookie(rawToken));
     return response;
   } catch (error) {
     console.error("[POST /api/visitor]", error);
