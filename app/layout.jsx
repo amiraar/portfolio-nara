@@ -3,6 +3,7 @@
  */
 
 import "./globals.css";
+import { headers } from "next/headers";
 import NextAuthSessionProvider from "@/components/SessionProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { validateGeminiConfig } from "@/lib/gemini";
@@ -29,12 +30,17 @@ export const metadata = {
   },
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  // Per-request CSP nonce set by proxy.js. Reading headers() also opts every
+  // route into dynamic rendering, which nonce-based CSP requires.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html lang="en" className="scroll-smooth dark">
       <head>
         {/* Anti-flash: apply saved theme before first paint */}
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `(function(){var t=localStorage.getItem('nara-theme');var p=t==='light'||t==='dark'?t:(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.classList.remove('light','dark');document.documentElement.classList.add(p);})();`,
           }}
