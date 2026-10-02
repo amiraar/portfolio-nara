@@ -19,7 +19,7 @@ import prisma from "@/lib/prisma";
 import { deleteVisitorData } from "@/lib/apiRouteUtils";
 import { GET } from "../app/api/cron/retention/route.js";
 
-const SECRET = "test-cron-secret-1234567890";
+const SECRET = "test-cron-secret-1234567890"; // gitleaks:allow (test fixture)
 
 function makeRequest(authorization) {
   return { headers: new Headers(authorization ? { authorization } : {}) };

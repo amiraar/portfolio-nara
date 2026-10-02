@@ -8,7 +8,7 @@ import {
 } from "../lib/totp.js";
 
 // RFC 6238 Appendix B: SHA-1 seed is the ASCII string "12345678901234567890".
-const RFC_SECRET_BASE32 = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
+const RFC_SECRET_BASE32 = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"; // gitleaks:allow (public RFC test vector)
 
 // RFC 6238 Appendix B lists 8-digit SHA-1 codes; a 6-digit code is the same
 // truncated value mod 10^6, i.e. the last six digits.
