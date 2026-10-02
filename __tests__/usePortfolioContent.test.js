@@ -4,8 +4,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // The module-level cache is reset between tests by re-importing the module.
 //
 // Since the rewrite, the hook fires a single GET /api/portfolio (no ?section=) that
-// returns { [section]: data } for ALL sections.  The response shape is therefore:
-//   { hero: {...}, about: {...}, experience: [...], ... }
+// returns every section wrapped in `content`.  The response shape is therefore:
+//   { content: { hero: {...}, about: {...}, experience: [...], ... } }
 
 describe("usePortfolioContent cache", () => {
   beforeEach(() => {
@@ -30,7 +30,7 @@ describe("usePortfolioContent cache", () => {
   it("updates data and stops loading after batch fetch resolves", async () => {
     const fetchedData = { name: "From DB" };
     vi.stubGlobal("fetch", () =>
-      Promise.resolve({ json: () => Promise.resolve({ hero: fetchedData }) })
+      Promise.resolve({ json: () => Promise.resolve({ content: { hero: fetchedData } }) })
     );
 
     const { renderHook, act } = await import("@testing-library/react");
@@ -50,7 +50,7 @@ describe("usePortfolioContent cache", () => {
   it("uses cached value and skips fetch on second render of same section", async () => {
     const fetchedData = { name: "Cached" };
     const fetchMock = vi.fn(() =>
-      Promise.resolve({ json: () => Promise.resolve({ about: fetchedData }) })
+      Promise.resolve({ json: () => Promise.resolve({ content: { about: fetchedData } }) })
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -88,7 +88,7 @@ describe("usePortfolioContent cache", () => {
     const aboutData = { heading: "About" };
     const fetchMock = vi.fn(() =>
       Promise.resolve({
-        json: () => Promise.resolve({ hero: heroData, about: aboutData }),
+        json: () => Promise.resolve({ content: { hero: heroData, about: aboutData } }),
       })
     );
     vi.stubGlobal("fetch", fetchMock);
@@ -118,7 +118,7 @@ describe("usePortfolioContent cache", () => {
     const fetchMock = vi.fn(() => {
       callCount += 1;
       const data = callCount === 1 ? staleData : freshData;
-      return Promise.resolve({ json: () => Promise.resolve({ hero: data }) });
+      return Promise.resolve({ json: () => Promise.resolve({ content: { hero: data } }) });
     });
     vi.stubGlobal("fetch", fetchMock);
 
