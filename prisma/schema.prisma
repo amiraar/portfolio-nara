@@ -64,6 +64,16 @@ model PortfolioContent {
   updatedAt DateTime @updatedAt
 }
 
+/// Single-row state for the owner login (id is always "owner").
+model OwnerAuthState {
+  id            String    @id @default("owner")
+  /// Sessions whose loginAt is at or before this instant are rejected
+  /// (set on sign-out — NextAuth JWT sessions cannot otherwise be revoked).
+  revokedBefore DateTime?
+  /// Last accepted TOTP time step; a code for this step or earlier is a replay.
+  lastTotpStep  Int?
+}
+
 /// Persistent rate-limit counters — replaces the unreliable in-memory store.
 /// key = "<scope>:<identifier>:<maxRequests>:<windowSec>"
 /// Atomic upsert via raw SQL ensures correctness across serverless instances.
