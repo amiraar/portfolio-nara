@@ -24,16 +24,6 @@ const MAX_NAME_LENGTH = 100;
 const MAX_EMAIL_LENGTH = 200;
 
 /**
- * Strip characters that could enable XSS if rendered without escaping.
- * React escapes by default, but this is a defence-in-depth measure.
- * @param {string} str
- * @returns {string}
- */
-function sanitizeText(str) {
-  return str.replace(/[<>"'`]/g, "");
-}
-
-/**
  * Resume the cookie holder's visitor, or create a new visitor, and return the
  * active conversation.
  * @param {Request} req
@@ -82,9 +72,10 @@ export async function POST(req) {
       );
     }
 
-    // --- XSS sanitization ---
-    const safeName = sanitizeText(name.trim());
-    const safeEmail = sanitizeText(email.trim().toLowerCase());
+    // Stored verbatim (React escapes on render), so names like "O'Brien" survive.
+    // The email regex below already rejects HTML/quote characters.
+    const safeName = name.trim();
+    const safeEmail = email.trim().toLowerCase();
 
     // Validate email format — stricter regex rejects obvious malformed emails.
     const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;

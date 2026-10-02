@@ -179,15 +179,34 @@ describe("POST /api/chat", () => {
     expect(data.error).toMatch(/too long/i);
   });
 
-  it("returns 400 when content is empty after XSS stripping", async () => {
-    // Content is only XSS characters — trimmed to empty
+  it("returns 400 when content is whitespace only", async () => {
     const req = makeRequest({
-      body: { conversationId: CONV_ID, content: '<>"' },
+      body: { conversationId: CONV_ID, content: "   \n\t " },
       cookie: VISITOR_TOKEN,
     });
 
     const res = await POST(req);
     expect(res.status).toBe(400);
+  });
+
+  it("returns 400 (not 500) for non-string content or conversationId", async () => {
+    for (const body of [
+      { conversationId: CONV_ID, content: 42 },
+      { conversationId: { $ne: null }, content: "Hello" },
+    ]) {
+      const res = await POST(makeRequest({ body, cookie: VISITOR_TOKEN }));
+      expect(res.status).toBe(400);
+    }
+  });
+
+  it("stores message text verbatim, including quotes and angle brackets", async () => {
+    const text = `Don't use <b>bold</b>, "quotes" are fine`;
+    prisma.message.create.mockReset().mockImplementation(({ data }) => Promise.resolve({ id: "m", ...data }));
+
+    const res = await POST(makeRequest({ body: { conversationId: CONV_ID, content: text }, cookie: VISITOR_TOKEN }));
+
+    expect(res.status).toBe(200);
+    expect(prisma.message.create.mock.calls[0][0].data.content).toBe(text);
   });
 
   it("returns 429 when rate limit is exceeded", async () => {

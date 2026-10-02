@@ -5,7 +5,7 @@
  *
  * Security:
  *  - Rate limit: 10 messages per minute per conversationId (fallback to IP).
- *  - Input validation: message must be 1–1000 characters.
+ *  - Input validation: message must be a string of 1–1000 characters (stored verbatim; React escapes on render).
  *  - Graceful Gemini fallback: returns a helpful message if the AI is down.
  */
 
@@ -72,7 +72,8 @@ export async function POST(req) {
       hasClientTempId: Boolean(clientTempId),
     });
 
-    if (!conversationId || !content?.trim()) {
+    // Type check first: a non-string value would throw on .trim() and surface as a 500.
+    if (typeof conversationId !== "string" || typeof content !== "string" || !conversationId || !content.trim()) {
       return withCorrelation(NextResponse.json(
         { error: "conversationId and content are required" },
         { status: 400 }
@@ -104,12 +105,11 @@ export async function POST(req) {
       return withCorrelation(NextResponse.json({ error: "Unauthorized" }, { status: 401 }), correlationId);
     }
 
-    // --- XSS sanitization + input length validation ---
-    // Strip HTML-dangerous characters before storing or sending to Gemini
-    const trimmed = content.trim().replace(/[<>"'`]/g, "");
-    if (trimmed.length === 0) {
-      return withCorrelation(NextResponse.json({ error: "Message cannot be empty" }, { status: 400 }), correlationId);
-    }
+    // --- Input length validation ---
+    // Stored verbatim: output encoding is React's job (every renderer escapes
+    // text; no dangerouslySetInnerHTML on messages). Stripping quotes here only
+    // corrupted ordinary text such as "don't".
+    const trimmed = content.trim();
     if (trimmed.length > MAX_CONTENT_LENGTH) {
       return withCorrelation(NextResponse.json(
         { error: `Message too long. Maximum ${MAX_CONTENT_LENGTH} characters allowed.` },

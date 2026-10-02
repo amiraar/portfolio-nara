@@ -254,6 +254,20 @@ describe("POST /api/visitor — input validation", () => {
     expect(res.status).toBe(400);
   });
 
+  it("stores names verbatim (no character stripping)", async () => {
+    await POST(makeRequest({ body: { name: "Sinéad O'Brien", email: "s@example.com", consent: true } }));
+
+    expect(prisma.visitor.create.mock.calls[0][0].data.name).toBe("Sinéad O'Brien");
+  });
+
+  it("rejects an email containing HTML or quote characters", async () => {
+    const res = await POST(
+      makeRequest({ body: { name: "Tester", email: "a<script>@example.com", consent: true } })
+    );
+
+    expect(res.status).toBe(400);
+  });
+
   it("rejects a malformed email address", async () => {
     const res = await POST(
       makeRequest({ body: { name: "Tester", email: "not-an-email", consent: true } })
