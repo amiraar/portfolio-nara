@@ -81,6 +81,23 @@ describe("authOptions.authorize", () => {
     expect(result).toMatchObject({ id: "owner" });
   });
 
+  it("runs a full bcrypt comparison against a well-formed hash when the email is wrong", async () => {
+    const bcrypt = (await import("bcryptjs")).default;
+    const hash = await bcrypt.hash("securepassword", 10);
+    process.env.NODE_ENV = "production";
+    process.env.OWNER_EMAIL = "owner@example.com";
+    process.env.OWNER_PASSWORD = hash;
+    const authorize = await getAuthorize();
+    const compareSpy = vi.spyOn(bcrypt, "compare");
+
+    const result = await authorize({ email: "wrong@example.com", password: "securepassword" });
+
+    expect(result).toBeNull();
+    expect(compareSpy).toHaveBeenCalledTimes(1);
+    // A malformed hash makes bcryptjs return instantly, leaking the email via timing.
+    expect(compareSpy.mock.calls[0][1]).toMatch(/^\$2[aby]\$12\$[./A-Za-z0-9]{53}$/);
+  });
+
   it("returns null without checking the password when the login rate limit is hit", async () => {
     process.env.NODE_ENV = "development";
     process.env.OWNER_EMAIL = "owner@example.com";

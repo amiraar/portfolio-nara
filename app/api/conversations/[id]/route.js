@@ -25,7 +25,8 @@ import { checkRateLimit } from "@/lib/rateLimit";
  */
 export async function GET(req, { params }) {
   try {
-    const { id } = params;
+    // Next.js 16: route params are a Promise and must be awaited.
+    const { id } = await params;
 
     // Rate limit to prevent CUID enumeration brute-force.
     const ip = getClientIP(req);
@@ -64,13 +65,10 @@ export async function GET(req, { params }) {
       },
     });
 
-    if (!conversation) {
+    // Visitors may only read their own conversation. Missing and not-owned both
+    // return 404 so the response does not reveal that another visitor's id exists.
+    if (!conversation || (visitorOwnerId !== null && conversation.visitorId !== visitorOwnerId)) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
-    }
-
-    // Visitors may only read their own conversation
-    if (visitorOwnerId !== null && conversation.visitorId !== visitorOwnerId) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // If the owner is viewing, update ownerLastReadAt to mark messages as read.
@@ -102,7 +100,7 @@ export async function PATCH(req, { params }) {
       return forbiddenResponse();
     }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await req.json();
     const { status } = body;
 

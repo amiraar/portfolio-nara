@@ -168,11 +168,11 @@ export default function ChatWidget() {
           setHasSession(true);
 
           // The HttpOnly visitor-token cookie proves identity. If it is gone
-          // (expired or cleared), the endpoint returns 401 and the visitor
-          // simply fills in the form again.
+          // (expired or cleared), the endpoint returns 401 (or 404 when the
+          // stored id is not theirs) and the visitor simply fills in the form again.
           try {
             const r = await fetch(`/api/conversations/${conversationId}`);
-            if (r.status === 401 || r.status === 403) {
+            if (r.status === 401 || r.status === 403 || r.status === 404) {
               localStorage.removeItem("nara_visitor");
               setHasSession(false);
               setVisitor(null);
