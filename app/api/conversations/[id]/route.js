@@ -122,7 +122,7 @@ export async function PATCH(req, { params }) {
       data: { status },
     });
 
-    auditLog(session, "conversation.status_change", { conversationId: id, status });
+    await auditLog(session, "conversation.status_change", { conversationId: id, status });
 
     return NextResponse.json({ conversation });
   } catch (error) {

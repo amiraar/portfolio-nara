@@ -98,7 +98,6 @@ export async function POST(req) {
     console.info("[chat] Cookie owner lookup", {
       correlationId,
       resolved: Boolean(tokenOwner),
-      ownerId: tokenOwner?.id ?? null,
     });
 
     if (!tokenOwner) {

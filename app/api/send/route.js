@@ -70,7 +70,7 @@ export async function POST(req) {
       },
     });
 
-    auditLog(session, "conversation.owner_reply", { conversationId, messageId: message.id });
+    await auditLog(session, "conversation.owner_reply", { conversationId, messageId: message.id });
 
     // Update conversation timestamp
     await touchConversation(conversationId);

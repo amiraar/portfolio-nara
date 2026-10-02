@@ -92,7 +92,7 @@ export async function PATCH(req) {
       create: { section, data },
     });
 
-    auditLog(session, "portfolio.update", { section });
+    await auditLog(session, "portfolio.update", { section });
 
     return NextResponse.json({ content });
   } catch (error) {

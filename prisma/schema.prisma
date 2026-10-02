@@ -74,6 +74,23 @@ model OwnerAuthState {
   lastTotpStep  Int?
 }
 
+/// Durable audit trail: owner actions and authentication events.
+/// Never store message bodies or visitor PII in `details`. Rows older than
+/// 90 days are deleted by /api/cron/retention (`ip` is personal data).
+model AuditEvent {
+  id      String   @id @default(cuid())
+  at      DateTime @default(now())
+  /// Owner email for owner actions, "anonymous" for unauthenticated attempts
+  actor   String
+  /// e.g. "auth.login_failed", "portfolio.update"
+  action  String
+  ip      String?
+  details Json?
+
+  @@index([at])
+  @@index([action, at])
+}
+
 /// Persistent rate-limit counters — replaces the unreliable in-memory store.
 /// key = "<scope>:<identifier>:<maxRequests>:<windowSec>"
 /// Atomic upsert via raw SQL ensures correctness across serverless instances.

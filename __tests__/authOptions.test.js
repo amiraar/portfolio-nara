@@ -3,12 +3,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // We test the authorize() logic extracted from authOptions.
 // We import authOptions directly and call the authorize function via the provider config.
 
-const { checkRateLimit, ownerAuthState } = vi.hoisted(() => ({
+const { checkRateLimit, ownerAuthState, auditEvent } = vi.hoisted(() => ({
   checkRateLimit: vi.fn(),
   ownerAuthState: { upsert: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn() },
+  auditEvent: { create: vi.fn() },
 }));
 vi.mock("@/lib/rateLimit", () => ({ checkRateLimit }));
-vi.mock("@/lib/prisma", () => ({ default: { ownerAuthState } }));
+vi.mock("@/lib/prisma", () => ({ default: { ownerAuthState, auditEvent } }));
+
+/** Actions recorded in the audit trail during the test. */
+function auditedActions() {
+  return auditEvent.create.mock.calls.map(([{ data }]) => data.action);
+}
 
 import { base32Decode, generateTotpSecret, totpAt } from "../lib/totp.js";
 
@@ -29,6 +35,7 @@ beforeEach(async () => {
   ownerAuthState.upsert.mockReset().mockResolvedValue({});
   ownerAuthState.updateMany.mockReset().mockResolvedValue({ count: 1 });
   ownerAuthState.findUnique.mockReset().mockResolvedValue(null);
+  auditEvent.create.mockReset().mockResolvedValue({});
 });
 
 afterEach(() => {
@@ -233,5 +240,41 @@ describe("authOptions session revocation", () => {
     await events.signOut({ token: {} });
     const { update } = ownerAuthState.upsert.mock.calls[0][0];
     expect(update.revokedBefore).toBeInstanceOf(Date);
+    expect(auditedActions()).toEqual(["auth.logout"]);
+  });
+});
+
+describe("authOptions audit trail", () => {
+  beforeEach(() => {
+    process.env.NODE_ENV = "development";
+    process.env.OWNER_EMAIL = "owner@example.com";
+    process.env.OWNER_PASSWORD = "correctpassword";
+  });
+
+  it("records a failed login with the IP but never the submitted credentials", async () => {
+    const authorize = await getAuthorize();
+    await authorize(
+      { email: "attacker@example.com", password: "guess" },
+      { headers: { "x-real-ip": "203.0.113.7" } }
+    );
+    expect(auditedActions()).toEqual(["auth.login_failed"]);
+    const { data } = auditEvent.create.mock.calls[0][0];
+    expect(data).toMatchObject({ actor: "anonymous", ip: "203.0.113.7" });
+    expect(JSON.stringify(data)).not.toContain("attacker@example.com");
+    expect(JSON.stringify(data)).not.toContain("guess");
+  });
+
+  it("records rate-limited, wrong-TOTP and successful logins", async () => {
+    const secret = generateTotpSecret();
+    process.env.OWNER_TOTP_SECRET = secret;
+    const authorize = await getAuthorize();
+    const creds = { email: "owner@example.com", password: "correctpassword" };
+
+    await authorize({ ...creds, totp: "000000" });
+    await authorize({ ...creds, totp: currentCode(secret) });
+    checkRateLimit.mockResolvedValue({ allowed: false, remaining: 0, retryAfter: 60 });
+    await authorize(creds);
+
+    expect(auditedActions()).toEqual(["auth.totp_failed", "auth.login_success", "auth.login_rate_limited"]);
   });
 });
