@@ -1,11 +1,19 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { createHash } from "crypto";
 
-vi.mock("@/lib/prisma", () => ({ default: { visitor: { findUnique: vi.fn() } } }));
+vi.mock("@/lib/prisma", () => ({
+  default: {
+    visitor: { findUnique: vi.fn(), deleteMany: vi.fn((args) => ({ op: "visitor", args })) },
+    conversation: { deleteMany: vi.fn((args) => ({ op: "conversation", args })) },
+    message: { deleteMany: vi.fn((args) => ({ op: "message", args })) },
+    $transaction: vi.fn(),
+  },
+}));
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 
 import prisma from "@/lib/prisma";
 import {
+  deleteVisitorData,
   findVisitorByToken,
   getClientIP,
   hashVisitorToken,
@@ -86,6 +94,23 @@ describe("visitor tokens", () => {
       tokenExpiresAt: new Date(Date.now() - 1000),
     });
     expect(await findVisitorByToken("raw-token")).toBeNull();
+  });
+
+  it("deletes messages, then conversations, then visitors in one transaction", async () => {
+    prisma.$transaction.mockResolvedValue([{ count: 5 }, { count: 2 }, { count: 1 }]);
+
+    const result = await deleteVisitorData(["v1"]);
+
+    const ops = prisma.$transaction.mock.calls[0][0];
+    expect(ops.map((o) => o.op)).toEqual(["message", "conversation", "visitor"]);
+    expect(ops[0].args).toEqual({ where: { conversation: { visitorId: { in: ["v1"] } } } });
+    expect(result).toEqual({ messages: 5, conversations: 2, visitors: 1 });
+  });
+
+  it("does nothing for an empty id list", async () => {
+    prisma.$transaction.mockClear();
+    expect(await deleteVisitorData([])).toEqual({ messages: 0, conversations: 0, visitors: 0 });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it("returns null for a missing token without querying", async () => {

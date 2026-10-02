@@ -139,11 +139,12 @@ export default function VisitorForm({ onSubmit }) {
               className="mt-0.5 accent-accent flex-shrink-0"
             />
             <span>
-              Saya setuju nama, email, dan isi chat saya disimpan untuk membalas pesan ini, dan pesan
-              diproses oleh Google Gemini AI. Data hanya disimpan selama diperlukan; minta penghapusan
-              kapan saja ke{" "}
-              <a href="mailto:amrlkurniawn19@gmail.com" className="text-accent/80 hover:underline">
-                amrlkurniawn19@gmail.com
+              Saya setuju nama, email, dan isi chat saya disimpan untuk membalas pesan ini dan dihapus
+              otomatis 90 hari setelah aktivitas terakhir. Isi pesan diproses oleh Google Gemini; Google
+              dapat memakainya untuk meningkatkan produknya dan peninjau manusia dapat membacanya, jadi
+              jangan kirim data pribadi atau sensitif. Detail di{" "}
+              <a href="/privacy" target="_blank" rel="noopener" className="text-accent/80 hover:underline">
+                Kebijakan Privasi
               </a>
               .
             </span>

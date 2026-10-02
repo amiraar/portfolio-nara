@@ -24,9 +24,17 @@ export default function Footer() {
           <span className="font-display italic text-[11px] text-text-muted">Kurniawan</span>
         </div>
 
-        <p className="font-mono text-[9px] text-text-muted/35 uppercase tracking-widest text-center">
-          {data.footerCopy}
-        </p>
+        <div className="flex flex-col items-center gap-1.5">
+          <p className="font-mono text-[9px] text-text-muted/35 uppercase tracking-widest text-center">
+            {data.footerCopy}
+          </p>
+          <a
+            href="/privacy"
+            className="font-mono text-[9px] text-text-muted/60 uppercase tracking-widest hover:text-accent transition-colors"
+          >
+            Kebijakan Privasi
+          </a>
+        </div>
 
         {/* Social links */}
         <div className="flex items-center gap-2">

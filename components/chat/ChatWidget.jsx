@@ -385,6 +385,37 @@ export default function ChatWidget() {
     setShowResetConfirm(false);
   }
 
+  /** Download a copy of the visitor's own data (UU PDP right of access). */
+  async function handleDownloadData() {
+    try {
+      const res = await fetch("/api/visitor/me");
+      if (!res.ok) throw new Error(String(res.status));
+      const url = URL.createObjectURL(await res.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "data-chat-kaia.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setSendError("Gagal mengunduh data. Coba lagi.");
+    }
+    setShowResetConfirm(false);
+  }
+
+  /** Permanently delete the visitor's data and withdraw consent (UU PDP right to erasure). */
+  async function handleDeleteData() {
+    if (!window.confirm("Hapus permanen nama, email, dan semua percakapanmu? Ini tidak bisa dibatalkan.")) return;
+    try {
+      const res = await fetch("/api/visitor/me", { method: "DELETE" });
+      if (!res.ok) throw new Error(String(res.status));
+      handleReset();
+      setSessionNotice("Data kamu sudah dihapus.");
+    } catch {
+      setSendError("Gagal menghapus data. Coba lagi atau hubungi email di Kebijakan Privasi.");
+      setShowResetConfirm(false);
+    }
+  }
+
   // --- Bubble ---
   if (widgetState === "hidden") return null;
 
@@ -416,7 +447,7 @@ export default function ChatWidget() {
               <div className="relative">
                 {showResetConfirm ? (
                   <div className="absolute right-0 top-8 z-10 bg-surface border border-border rounded-xl shadow-xl p-3 w-44">
-                    <p className="text-[11px] text-text-muted mb-2 leading-snug">Mulai percakapan baru? Riwayat akan dihapus.</p>
+                    <p className="text-[11px] text-text-muted mb-2 leading-snug">Tutup sesi chat ini? Riwayat tetap tersimpan di server; pakai &quot;Hapus data saya&quot; untuk menghapusnya.</p>
                     <div className="flex gap-2">
                       <button onClick={handleReset}
                         className="flex-1 text-[11px] font-mono bg-red-500/15 text-red-400 border border-red-400/20 rounded-lg py-1 hover:bg-red-500/25 transition-colors">
@@ -425,6 +456,16 @@ export default function ChatWidget() {
                       <button onClick={() => setShowResetConfirm(false)}
                         className="flex-1 text-[11px] font-mono border border-border text-text-muted rounded-lg py-1 hover:border-accent/30 transition-colors">
                         Batal
+                      </button>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-border flex flex-col gap-1.5">
+                      <button onClick={handleDownloadData}
+                        className="text-left text-[11px] text-text-muted hover:text-accent transition-colors">
+                        Unduh data saya
+                      </button>
+                      <button onClick={handleDeleteData}
+                        className="text-left text-[11px] text-red-400/80 hover:text-red-400 transition-colors">
+                        Hapus data saya
                       </button>
                     </div>
                   </div>
