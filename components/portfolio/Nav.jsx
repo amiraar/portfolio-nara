@@ -10,6 +10,7 @@ const SECTIONS = [
   { id: "projects", label: "Projects" },
   { id: "skills", label: "Skills" },
   { id: "education", label: "Education" },
+  { id: "certificates", label: "Certificates" },
 ];
 
 export default function Nav() {

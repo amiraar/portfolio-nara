@@ -12,6 +12,7 @@ import Experience from "@/components/portfolio/Experience";
 import Projects from "@/components/portfolio/Projects";
 import Skills from "@/components/portfolio/Skills";
 import Education from "@/components/portfolio/Education";
+import Certificates from "@/components/portfolio/Certificates";
 import Contact from "@/components/portfolio/Contact";
 import Footer from "@/components/portfolio/Footer";
 import ChatWidget from "@/components/chat/ChatWidget";
@@ -36,6 +37,7 @@ export default function HomePage() {
         <Projects />
         <Skills />
         <Education />
+        <Certificates />
         <Contact />
       </main>
       <Footer />

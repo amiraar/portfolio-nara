@@ -5,10 +5,13 @@ import { clsx } from "clsx";
 import { usePortfolioContent } from "@/lib/usePortfolioContent";
 import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
 import { useRevealOnScroll } from "@/lib/useRevealOnScroll";
+import { certificatesForExperience } from "@/lib/certificates";
+import CertificateViewer from "@/components/portfolio/CertificateViewer";
 
 export default function Experience() {
   const sectionRef = useRef(null);
   const { data: items } = usePortfolioContent("experience", PORTFOLIO_DEFAULTS.experience);
+  const [openCertificate, setOpenCertificate] = useState(null);
   useRevealOnScroll(sectionRef, 0.08);
 
   return (
@@ -33,18 +36,32 @@ export default function Experience() {
 
             <div className="flex flex-col gap-5">
               {items.map((exp, i) => (
-                <ExperienceItem key={`${exp.company}-${exp.role}-${i}`} exp={exp} index={i} />
+                <ExperienceItem
+                  key={`${exp.company}-${exp.role}-${i}`}
+                  exp={exp}
+                  index={i}
+                  onOpenCertificate={setOpenCertificate}
+                />
               ))}
             </div>
           </div>
         </div>
       </div>
+
+      {openCertificate ? (
+        <CertificateViewer
+          key={openCertificate.id}
+          certificate={openCertificate}
+          onClose={() => setOpenCertificate(null)}
+        />
+      ) : null}
     </section>
   );
 }
 
-function ExperienceItem({ exp, index }) {
+function ExperienceItem({ exp, index, onOpenCertificate }) {
   const [expanded, setExpanded] = useState(false);
+  const certificates = certificatesForExperience(exp);
 
   return (
     <div className="relative flex items-start gap-6">
@@ -113,6 +130,22 @@ function ExperienceItem({ exp, index }) {
             <span key={tag} className="tag-pill">{tag}</span>
           ))}
         </div>
+
+        {certificates.map((cert) => (
+          <button
+            key={cert.id}
+            type="button"
+            onClick={() => onOpenCertificate(cert)}
+            className="relative mt-4 inline-flex items-center gap-2 font-mono text-[10px] text-accent border border-accent/25 bg-accent/5 hover:bg-accent/10 px-3 py-1.5 rounded-full transition-colors"
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="1.5" y="2.5" width="13" height="9" rx="1.5" />
+              <circle cx="11" cy="10.5" r="2" />
+              <path d="M10 12.3V15l1-.7 1 .7v-2.7M4 5.5h6M4 8h3.5" />
+            </svg>
+            {cert.pages.length > 1 ? `View certificates (${cert.pages.length})` : "View certificate"}
+          </button>
+        ))}
       </article>
     </div>
   );
