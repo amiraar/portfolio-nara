@@ -40,42 +40,49 @@ export default function Projects() {
               project={project}
               spanClass={project.highlight ? "md:col-span-4" : (COL_SPANS[index] ?? "md:col-span-2")}
               index={index}
-              onOpenCaseStudy={() => setActiveProject(project)}
+              onOpen={() => setActiveProject(project)}
             />
           ))}
         </div>
       </div>
 
       {activeProject ? (
-        <CaseStudyModal project={activeProject} onClose={() => setActiveProject(null)} />
+        <ProjectModal project={activeProject} onClose={() => setActiveProject(null)} />
       ) : null}
     </section>
   );
 }
 
-function ProjectCard({ project, spanClass, index, onOpenCaseStudy }) {
+/** Label for a project's external link, based on where it points. */
+function linkLabel(url) {
+  if (/figma\.com/i.test(url)) return "View in Figma";
+  if (/github\.com/i.test(url)) return "View on GitHub";
+  return "Visit project";
+}
+
+// Every card opens the modal: a full case study when the project has one,
+// otherwise an overview with the project link.
+function ProjectCard({ project, spanClass, index, onOpen }) {
   const isWide = spanClass === "md:col-span-4";
-  const hasCaseStudy = Boolean(project.caseStudy);
+  const detailLabel = project.caseStudy ? "Case study →" : "Details →";
 
   return (
     <article
-      onClick={hasCaseStudy ? onOpenCaseStudy : undefined}
-      role={hasCaseStudy ? "button" : undefined}
-      tabIndex={hasCaseStudy ? 0 : undefined}
-      onKeyDown={
-        hasCaseStudy
-          ? (e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onOpenCaseStudy();
-              }
-            }
-          : undefined
-      }
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      aria-label={`${project.name}: ${project.caseStudy ? "open case study" : "open details"}`}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
       className={clsx(
-        "warm-card rounded-2xl overflow-hidden group relative transition-all duration-250",
+        "warm-card rounded-2xl overflow-hidden group relative transition-all duration-250 cursor-pointer",
         "hover:-translate-y-0.5 hover:border-accent/30",
-        hasCaseStudy ? "cursor-pointer" : "cursor-default",
+        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
         spanClass
       )}
     >
@@ -132,15 +139,9 @@ function ProjectCard({ project, spanClass, index, onOpenCaseStudy }) {
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          {project.caseStudy ? (
-            <span className="font-mono text-[9px] uppercase tracking-widest text-accent/70">
-              {project.link ? "Case study →" : "Proprietary — Case study →"}
-            </span>
-          ) : !project.link ? (
-            <span className="font-mono text-[9px] uppercase tracking-widest text-text-muted/50">
-              Proprietary
-            </span>
-          ) : null}
+          <span className="font-mono text-[9px] uppercase tracking-widest text-accent/70 group-hover:text-accent transition-colors">
+            {project.link ? detailLabel : `Proprietary — ${detailLabel}`}
+          </span>
 
           {project.link ? (
             <a
@@ -149,7 +150,7 @@ function ProjectCard({ project, spanClass, index, onOpenCaseStudy }) {
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               className="w-7 h-7 flex-shrink-0 rounded-full border border-border flex items-center justify-center hover:border-accent hover:bg-accent/8 transition-all"
-              aria-label="View project"
+              aria-label={`${linkLabel(project.link)}: ${project.name}`}
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                 <path d="M2.5 9.5L9.5 2.5M9.5 2.5H5.5M9.5 2.5V6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
@@ -162,7 +163,7 @@ function ProjectCard({ project, spanClass, index, onOpenCaseStudy }) {
   );
 }
 
-function CaseStudyModal({ project, onClose }) {
+function ProjectModal({ project, onClose }) {
   useEffect(() => {
     const onKeyDown = (e) => {
       if (e.key === "Escape") onClose();
@@ -182,7 +183,7 @@ function CaseStudyModal({ project, onClose }) {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
       role="dialog"
       aria-modal="true"
-      aria-label={`${project.name} case study`}
+      aria-label={`${project.name} ${caseStudy ? "case study" : "details"}`}
     >
       <div
         className="fixed inset-0 bg-background/80 backdrop-blur-sm"
@@ -205,7 +206,7 @@ function CaseStudyModal({ project, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close case study"
+            aria-label="Close"
             className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:border-accent hover:bg-accent/8 transition-all flex-shrink-0"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
@@ -222,36 +223,59 @@ function CaseStudyModal({ project, onClose }) {
             ))}
           </div>
 
-          <div className="mt-6 space-y-5 text-[13px] text-text-muted leading-[1.7]">
-            <section>
-              <h4 className="font-mono text-[10px] uppercase tracking-widest text-text-primary mb-1.5">
-                Problem
-              </h4>
-              <p>{caseStudy.problem}</p>
-            </section>
+          {caseStudy ? (
+            <div className="mt-6 space-y-5 text-[13px] text-text-muted leading-[1.7]">
+              <section>
+                <h4 className="font-mono text-[10px] uppercase tracking-widest text-text-primary mb-1.5">
+                  Problem
+                </h4>
+                <p>{caseStudy.problem}</p>
+              </section>
 
-            <section>
-              <h4 className="font-mono text-[10px] uppercase tracking-widest text-text-primary mb-1.5">
-                Approach
-              </h4>
-              {Array.isArray(caseStudy.approach) ? (
-                <ul className="space-y-2 list-disc pl-4">
-                  {caseStudy.approach.map((point, i) => (
-                    <li key={i}>{point}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p>{caseStudy.approach}</p>
-              )}
-            </section>
+              <section>
+                <h4 className="font-mono text-[10px] uppercase tracking-widest text-text-primary mb-1.5">
+                  Approach
+                </h4>
+                {Array.isArray(caseStudy.approach) ? (
+                  <ul className="space-y-2 list-disc pl-4">
+                    {caseStudy.approach.map((point, i) => (
+                      <li key={i}>{point}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>{caseStudy.approach}</p>
+                )}
+              </section>
 
-            <section>
+              <section>
+                <h4 className="font-mono text-[10px] uppercase tracking-widest text-text-primary mb-1.5">
+                  Result
+                </h4>
+                <p>{caseStudy.result}</p>
+              </section>
+            </div>
+          ) : (
+            <section className="mt-6 text-[13px] text-text-muted leading-[1.7]">
               <h4 className="font-mono text-[10px] uppercase tracking-widest text-text-primary mb-1.5">
-                Result
+                Overview
               </h4>
-              <p>{caseStudy.result}</p>
+              <p>{project.description}</p>
             </section>
-          </div>
+          )}
+
+          {project.link ? (
+            <a
+              href={project.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 inline-flex items-center gap-2 font-mono text-[11px] text-accent border border-accent/30 bg-accent/8 px-4 py-2 rounded-full hover:bg-accent hover:text-background transition-colors"
+            >
+              {linkLabel(project.link)}
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <path d="M2.5 9.5L9.5 2.5M9.5 2.5H5.5M9.5 2.5V6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </a>
+          ) : null}
 
           {screenshots.length > 0 ? (
             <div className="mt-6 pt-6 border-t border-border/60">

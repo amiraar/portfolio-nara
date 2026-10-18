@@ -87,14 +87,14 @@ export default function Nav() {
           </span>
         </button>
 
-        {/* Desktop links */}
-        <div className="hidden sm:flex items-center gap-1">
+        {/* Desktop links (md+: six links do not fit next to the controls at sm) */}
+        <div className="hidden md:flex items-center gap-0.5 lg:gap-1">
           {SECTIONS.map(({ id, label }) => (
             <button
               key={id}
               onClick={() => scrollTo(id)}
               className={clsx(
-                "relative px-3 py-1.5 text-[11px] font-medium tracking-wide rounded-md transition-all duration-200",
+                "relative px-2.5 lg:px-3 py-1.5 text-[11px] font-medium tracking-wide rounded-md transition-all duration-200",
                 active === id
                   ? "text-accent"
                   : "text-text-muted hover:text-text-primary"
@@ -102,7 +102,7 @@ export default function Nav() {
             >
               {label}
               {active === id && (
-                <span className="absolute bottom-0.5 left-3 right-3 h-px bg-accent rounded-full" />
+                <span className="absolute bottom-0.5 left-2.5 right-2.5 lg:left-3 lg:right-3 h-px bg-accent rounded-full" />
               )}
             </button>
           ))}
@@ -146,8 +146,10 @@ export default function Nav() {
           {/* Hamburger */}
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="sm:hidden w-7 h-7 flex flex-col items-center justify-center gap-1.5 rounded-md hover:bg-surface-2 transition-colors"
+            className="md:hidden w-7 h-7 flex flex-col items-center justify-center gap-1.5 rounded-md hover:bg-surface-2 transition-colors"
             aria-label="Toggle menu"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
           >
             <span className={clsx("block w-4 h-px bg-text-primary transition-all duration-300", menuOpen && "rotate-45 translate-y-[5px]")} />
             <span className={clsx("block w-4 h-px bg-text-primary transition-all duration-300", menuOpen && "opacity-0")} />
@@ -158,9 +160,13 @@ export default function Nav() {
 
       {/* Mobile menu */}
       <div
+        id="mobile-menu"
+        inert={!menuOpen}
         className={clsx(
-          "sm:hidden overflow-hidden transition-all duration-300 border-t border-border/40 bg-background/95 backdrop-blur-xl",
-          menuOpen ? "max-h-72 opacity-100" : "max-h-0 opacity-0"
+          "md:hidden transition-all duration-300 border-t border-border/40 bg-background/95 backdrop-blur-xl",
+          menuOpen
+            ? "max-h-[calc(100dvh-52px)] overflow-y-auto opacity-100"
+            : "max-h-0 overflow-hidden opacity-0"
         )}
       >
         <div className="px-6 py-3 flex flex-col gap-0.5">

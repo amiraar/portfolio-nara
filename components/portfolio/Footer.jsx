@@ -32,7 +32,7 @@ export default function Footer() {
             href="/privacy"
             className="font-mono text-[9px] text-text-muted/60 uppercase tracking-widest hover:text-accent transition-colors"
           >
-            Kebijakan Privasi
+            Privacy Policy
           </a>
         </div>
 
