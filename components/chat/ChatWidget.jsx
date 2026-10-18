@@ -121,9 +121,9 @@ export default function ChatWidget() {
   // Cleared when a new_message arrives; auto-expires after 15s to avoid stuck indicators.
   const typingTimeoutRef = useRef(null);
 
-  // Show bubble after 3 seconds
+  // Show bubble after 3 seconds, unless the visitor already opened the chat.
   useEffect(() => {
-    const timer = setTimeout(() => setWidgetState("bubble"), 3000);
+    const timer = setTimeout(() => setWidgetState((s) => (s === "hidden" ? "bubble" : s)), 3000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -257,7 +257,7 @@ export default function ChatWidget() {
         conversationId: conversation.id,
         error,
       });
-      setSendError("Realtime chat sedang bermasalah. Pesan tetap dikirim lewat API.");
+      setSendError("Live updates are having trouble. Your messages will still be sent.");
     }
 
     channel.bind("new_message", onNewMessage);
@@ -320,7 +320,7 @@ export default function ChatWidget() {
         // return to the form so the visitor starts a new session explicitly.
         if (res.status === 401) {
           handleReset();
-          setSessionNotice("Sesi chat berakhir. Isi form lagi untuk melanjutkan.");
+          setSessionNotice("Your chat session has ended. Fill in the form again to continue.");
           return;
         }
 
@@ -329,7 +329,7 @@ export default function ChatWidget() {
         if (!res.ok) {
           // Remove optimistic message and show error
           setMessages((prev) => prev.filter((m) => String(m.id) !== clientTempId));
-          setSendError(data.error ?? "Gagal mengirim pesan. Coba lagi.");
+          setSendError(data.error ?? "Couldn't send your message. Please try again.");
           return;
         }
 
@@ -354,7 +354,7 @@ export default function ChatWidget() {
       } catch (err) {
         console.error("Send error:", err);
         setMessages((prev) => prev.filter((m) => String(m.id) !== clientTempId));
-        setSendError("Gagal mengirim pesan. Periksa koneksi internet Anda.");
+        setSendError("Couldn't send your message. Check your internet connection.");
       } finally {
         setSending(false);
       }
@@ -397,21 +397,21 @@ export default function ChatWidget() {
       link.click();
       URL.revokeObjectURL(url);
     } catch {
-      setSendError("Gagal mengunduh data. Coba lagi.");
+      setSendError("Couldn't download your data. Please try again.");
     }
     setShowResetConfirm(false);
   }
 
   /** Permanently delete the visitor's data and withdraw consent (UU PDP right to erasure). */
   async function handleDeleteData() {
-    if (!window.confirm("Hapus permanen nama, email, dan semua percakapanmu? Ini tidak bisa dibatalkan.")) return;
+    if (!window.confirm("Permanently delete your name, email, and all your conversations? This can't be undone.")) return;
     try {
       const res = await fetch("/api/visitor/me", { method: "DELETE" });
       if (!res.ok) throw new Error(String(res.status));
       handleReset();
-      setSessionNotice("Data kamu sudah dihapus.");
+      setSessionNotice("Your data has been deleted.");
     } catch {
-      setSendError("Gagal menghapus data. Coba lagi atau hubungi email di Kebijakan Privasi.");
+      setSendError("Couldn't delete your data. Try again, or email the address in the Privacy Policy.");
       setShowResetConfirm(false);
     }
   }
@@ -447,7 +447,7 @@ export default function ChatWidget() {
               <div className="relative">
                 {showResetConfirm ? (
                   <div className="absolute right-0 top-8 z-10 bg-surface border border-border rounded-xl shadow-xl p-3 w-44">
-                    <p className="text-[11px] text-text-muted mb-2 leading-snug">Tutup sesi chat ini? Riwayat tetap tersimpan di server; pakai &quot;Hapus data saya&quot; untuk menghapusnya.</p>
+                    <p className="text-[11px] text-text-muted mb-2 leading-snug">Close this chat session? Your history stays on the server; use &quot;Delete my data&quot; to remove it.</p>
                     <div className="flex gap-2">
                       <button onClick={handleReset}
                         className="flex-1 text-[11px] font-mono bg-red-500/15 text-red-400 border border-red-400/20 rounded-lg py-1 hover:bg-red-500/25 transition-colors">
@@ -455,17 +455,17 @@ export default function ChatWidget() {
                       </button>
                       <button onClick={() => setShowResetConfirm(false)}
                         className="flex-1 text-[11px] font-mono border border-border text-text-muted rounded-lg py-1 hover:border-accent/30 transition-colors">
-                        Batal
+                        Cancel
                       </button>
                     </div>
                     <div className="mt-3 pt-2.5 border-t border-border flex flex-col gap-1.5">
                       <button onClick={handleDownloadData}
                         className="text-left text-[11px] text-text-muted hover:text-accent transition-colors">
-                        Unduh data saya
+                        Download my data
                       </button>
                       <button onClick={handleDeleteData}
                         className="text-left text-[11px] text-red-400/80 hover:text-red-400 transition-colors">
-                        Hapus data saya
+                        Delete my data
                       </button>
                     </div>
                   </div>
@@ -473,8 +473,8 @@ export default function ChatWidget() {
                 <button
                   onClick={() => setShowResetConfirm((v) => !v)}
                   className="w-7 h-7 rounded-lg hover:bg-border flex items-center justify-center transition-colors text-text-muted"
-                  aria-label="Mulai percakapan baru"
-                  title="Mulai percakapan baru"
+                  aria-label="Chat options"
+                  title="Chat options"
                 >
                   <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                     <path d="M11.5 2A6 6 0 101 6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>

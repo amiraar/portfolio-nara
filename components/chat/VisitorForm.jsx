@@ -26,14 +26,14 @@ export default function VisitorForm({ onSubmit }) {
   }
 
   function validateName(val) {
-    if (!val.trim()) return "Nama tidak boleh kosong.";
+    if (!val.trim()) return "Please enter your name.";
     if (val.trim().length < 2) return "Nama terlalu pendek.";
     return "";
   }
 
   function validateEmail(val) {
-    if (!val.trim()) return "Email tidak boleh kosong.";
-    if (!isValidEmail(val)) return "Format email tidak valid.";
+    if (!val.trim()) return "Please enter your email.";
+    if (!isValidEmail(val)) return "Please enter a valid email address.";
     return "";
   }
 
@@ -42,7 +42,7 @@ export default function VisitorForm({ onSubmit }) {
     setError("");
     const ne = validateName(name);
     const ee = validateEmail(email);
-    const ce = consent ? "" : "Centang persetujuan untuk melanjutkan.";
+    const ce = consent ? "" : "Please tick the consent box to continue.";
     setNameError(ne);
     setEmailError(ee);
     setConsentError(ce);
@@ -78,10 +78,10 @@ export default function VisitorForm({ onSubmit }) {
     <div className="p-5 flex flex-col gap-4">
       <div>
         <p className="font-display text-base text-text-primary leading-snug">
-          Hei! Saya Kaia 👋
+          Hi! I'm Kaia 👋
         </p>
         <p className="text-sm text-text-muted mt-1">
-          Perkenalkan dirimu dulu, ya.
+          Tell me a little about yourself first.
         </p>
       </div>
 
@@ -91,7 +91,7 @@ export default function VisitorForm({ onSubmit }) {
           <div className="relative">
             <input
               type="text"
-              placeholder="Nama kamu"
+              placeholder="Your name"
               value={name}
               onChange={(e) => { setName(e.target.value); if (nameError) setNameError(validateName(e.target.value)); }}
               onBlur={(e) => setNameError(validateName(e.target.value))}
@@ -115,7 +115,7 @@ export default function VisitorForm({ onSubmit }) {
         <div className="flex flex-col gap-1">
           <input
             type="email"
-            placeholder="Email kamu (Gmail, Yahoo, dsb)"
+            placeholder="Your email"
             value={email}
             onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(validateEmail(e.target.value)); }}
             onBlur={(e) => setEmailError(validateEmail(e.target.value))}
@@ -139,12 +139,12 @@ export default function VisitorForm({ onSubmit }) {
               className="mt-0.5 accent-accent flex-shrink-0"
             />
             <span>
-              Saya setuju nama, email, dan isi chat saya disimpan untuk membalas pesan ini dan dihapus
-              otomatis 90 hari setelah aktivitas terakhir. Isi pesan diproses oleh Google Gemini; Google
-              dapat memakainya untuk meningkatkan produknya dan peninjau manusia dapat membacanya, jadi
-              jangan kirim data pribadi atau sensitif. Detail di{" "}
+              I agree that my name, email, and chat messages are stored so I can get a reply, and are
+              deleted automatically 90 days after my last activity. Messages are processed by Google
+              Gemini; Google may use them to improve its products and human reviewers may read them, so
+              don&apos;t share personal or sensitive information. Details in the{" "}
               <a href="/privacy" target="_blank" rel="noopener" className="text-accent/80 hover:underline">
-                Kebijakan Privasi
+                Privacy Policy
               </a>
               .
             </span>
@@ -175,13 +175,13 @@ export default function VisitorForm({ onSubmit }) {
               </svg>
               Connecting...
             </>
-          ) : "Mulai Chat →"}
+          ) : "Start chat →"}
         </button>
       </form>
 
       <p className="text-xs text-text-muted text-center">
-        Email digunakan untuk melanjutkan percakapan sebelumnya.{" "}
-        <span className="text-accent/70">Semua domain didukung.</span>
+        Your email is only used to reply to you.{" "}
+        <span className="text-accent/70">Any email provider works.</span>
       </p>
     </div>
   );

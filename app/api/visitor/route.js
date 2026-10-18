@@ -36,7 +36,7 @@ export async function POST(req) {
     const { allowed, retryAfter } = await checkRateLimit(`visitor:${ip}`, 5, 60);
     if (!allowed) {
       return NextResponse.json(
-        { error: `Terlalu banyak permintaan. Coba lagi dalam ${retryAfter} detik.` },
+        { error: `Too many requests. Please try again in ${retryAfter} seconds.` },
         {
           status: 429,
           headers: { "Retry-After": String(retryAfter) },

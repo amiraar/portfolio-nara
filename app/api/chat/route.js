@@ -31,7 +31,7 @@ const CHAT_IP_DAILY_LIMIT = 30;
 /** Fallback reply shown to visitors when Gemini is unavailable. */
 const AI_FALLBACK_MESSAGE =
   process.env.AI_FALLBACK_MESSAGE ??
-  "Maaf, Kaia sedang tidak tersedia saat ini. Silakan hubungi Amirul langsung di amrlkurniawn19@gmail.com — ia akan segera membalas pesan Anda.";
+  "Sorry, Kaia is unavailable right now. Please email Amirul directly at amrlkurniawn19@gmail.com.";
 
 function getCorrelationId(req) {
   // Always generate server-side — never trust the client-supplied header for
@@ -136,7 +136,7 @@ export async function POST(req) {
       : null;
     if (ipLimit && !ipLimit.allowed) {
       return withCorrelation(NextResponse.json(
-        { error: "Batas pesan harian tercapai. Coba lagi besok." },
+        { error: "Daily message limit reached. Please try again tomorrow." },
         {
           status: 429,
           headers: {
@@ -151,8 +151,8 @@ export async function POST(req) {
     if (!allowed) {
       const isDaily = limitedBy === "chat:rpd";
       const errorMsg = isDaily
-        ? `Batas pesan harian tercapai. Coba lagi besok.`
-        : `Terlalu banyak pesan. Coba lagi dalam ${retryAfter} detik.`;
+        ? `Daily message limit reached. Please try again tomorrow.`
+        : `Too many messages. Please try again in ${retryAfter} seconds.`;
       return withCorrelation(NextResponse.json(
         { error: errorMsg },
         {
