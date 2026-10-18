@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Image from "next/image";
 import { usePortfolioContent } from "@/lib/usePortfolioContent";
 import { PORTFOLIO_DEFAULTS } from "@/lib/portfolioDefaults";
+import portrait from "@/public/profile/portrait.webp";
 
 /** @param {{ onChatOpen: () => void }} props */
 export default function Hero({ onChatOpen }) {
@@ -53,9 +55,9 @@ export default function Hero({ onChatOpen }) {
 
       <div
         ref={containerRef}
-        className="max-w-6xl mx-auto px-6 lg:px-8 py-28 w-full"
+        className="max-w-6xl mx-auto px-6 lg:px-8 pt-24 pb-16 lg:py-28 w-full"
       >
-        <div className="flex flex-col lg:flex-row items-center gap-16">
+        <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
           {/* Left — text content */}
           <div className="w-full lg:w-[55%]">
             {/* Status badge */}
@@ -155,9 +157,13 @@ export default function Hero({ onChatOpen }) {
             </div>
           </div>
 
-          {/* Right — visual composition */}
-          <div className="w-full lg:w-[45%] flex items-center justify-center">
-            <HeroIllustration />
+          {/* Right — portrait (shown first on mobile so visitors see a face right away) */}
+          <div
+            data-reveal
+            className="order-first lg:order-none w-full lg:w-[45%] flex items-center justify-center"
+            style={{ opacity: 0, transform: "translateY(14px)", transition: "all 0.65s cubic-bezier(0.16,1,0.3,1)" }}
+          >
+            <HeroPortrait name={data.name} />
           </div>
         </div>
       </div>
@@ -171,103 +177,46 @@ export default function Hero({ onChatOpen }) {
   );
 }
 
-function HeroIllustration() {
+/** @param {{ name?: string }} props */
+function HeroPortrait({ name }) {
   return (
-    <div
-      className="relative w-full max-w-[420px] aspect-square"
-      style={{ animation: "float 7s ease-in-out infinite" }}
-      aria-hidden="true"
-    >
-      {/* Outer ring */}
-      <svg
-        viewBox="0 0 420 420"
-        fill="none"
-        className="absolute inset-0 w-full h-full"
+    <div className="relative w-full max-w-[200px] sm:max-w-[280px] lg:max-w-[380px] aspect-[4/5]">
+      {/* Arch backdrop; the head rises above its top edge */}
+      <div
+        className="absolute inset-x-0 bottom-0 top-[14%] rounded-t-full rounded-b-2xl warm-card overflow-hidden"
+        aria-hidden="true"
       >
-        <circle
-          cx="210" cy="210" r="200"
-          stroke="rgb(var(--color-accent))"
-          strokeOpacity="0.07"
-          strokeWidth="1"
-          strokeDasharray="4 8"
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(circle at 50% 30%, rgb(var(--color-accent) / 0.18), transparent 70%)",
+          }}
         />
-        <circle
-          cx="210" cy="210" r="160"
-          stroke="rgb(var(--color-border))"
-          strokeOpacity="0.6"
-          strokeWidth="1"
-        />
-      </svg>
-
-      {/* Central card — Backend side */}
-      <div
-        className="absolute warm-card rounded-2xl p-5 shadow-[0_8px_40px_rgb(0/0/0/0.3)]"
-        style={{ top: "12%", left: "8%", width: "56%", }}
-      >
-        <div className="flex items-center gap-2 mb-3">
-          <span className="w-2 h-2 rounded-full bg-accent/60" />
-          <span className="font-mono text-[9px] text-accent tracking-widest uppercase">Backend</span>
-        </div>
-        <div className="space-y-1.5">
-          {["Laravel", "PostgreSQL", "REST API", "AWS S3"].map((item) => (
-            <div key={item} className="flex items-center gap-2">
-              <span className="w-1 h-1 rounded-full bg-accent/30" />
-              <span className="font-mono text-[10px] text-text-muted">{item}</span>
-            </div>
-          ))}
-        </div>
       </div>
 
-      {/* Floating accent tag */}
-      <div
-        className="absolute font-mono text-[9px] tracking-widest text-accent-2/80 border border-accent-2/20 bg-accent-2/5 px-2.5 py-1 rounded-full"
-        style={{ top: "34%", right: "4%", transform: "rotate(2deg)" }}
-      >
-        3 MVPs shipped
-      </div>
-
-      {/* Design card */}
-      <div
-        className="absolute warm-card rounded-2xl p-5 shadow-[0_8px_40px_rgb(0/0/0/0.25)]"
-        style={{ bottom: "10%", right: "5%", width: "55%" }}
-      >
-        <div className="flex items-center gap-2 mb-3">
-          <span className="w-2 h-2 rounded-full bg-accent-2/60" />
-          <span className="font-mono text-[9px] text-accent-2 tracking-widest uppercase">Design</span>
-        </div>
-        <div className="space-y-1.5">
-          {["Figma", "User Research", "UI Systems", "Prototyping"].map((item) => (
-            <div key={item} className="flex items-center gap-2">
-              <span className="w-1 h-1 rounded-full bg-accent-2/30" />
-              <span className="font-mono text-[10px] text-text-muted">{item}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Corner dot grid */}
-      <svg
-        viewBox="0 0 80 80"
-        className="absolute bottom-6 left-4 w-16 h-16 opacity-20"
-      >
-        <defs>
-          <pattern id="dot-grid-hero" width="10" height="10" patternUnits="userSpaceOnUse">
-            <circle cx="1" cy="1" r="1" fill="rgb(var(--color-accent))" />
-          </pattern>
-        </defs>
-        <rect width="80" height="80" fill="url(#dot-grid-hero)" />
-      </svg>
+      <Image
+        src={portrait}
+        alt={name ? `${name} at graduation` : "Graduation portrait"}
+        fill
+        preload
+        placeholder="blur"
+        sizes="(min-width: 1024px) 380px, (min-width: 640px) 280px, 200px"
+        className="object-contain object-bottom rounded-b-2xl"
+      />
 
       {/* Location pill */}
-      <div
-        className="absolute glass-card rounded-full px-3 py-1.5 flex items-center gap-1.5"
-        style={{ top: "8%", right: "12%", transform: "rotate(-2deg)" }}
-      >
-        <svg width="9" height="9" viewBox="0 0 12 16" fill="none">
+      <div className="absolute -left-2 sm:-left-6 bottom-[12%] glass-card rounded-full px-3 py-1.5 flex items-center gap-1.5 shadow-[0_8px_24px_rgb(0_0_0/0.25)]">
+        <svg width="9" height="9" viewBox="0 0 12 16" fill="none" aria-hidden="true">
           <path d="M6 0C3 0 0 2.69 0 6c0 4.5 6 10 6 10s6-5.5 6-10c0-3.31-2.69-6-6-6z" fill="rgb(var(--color-accent))" fillOpacity="0.7" />
           <circle cx="6" cy="6" r="2" fill="rgb(var(--color-bg))" />
         </svg>
-        <span className="font-mono text-[9px] text-text-muted">Yogyakarta, ID</span>
+        <span className="font-mono text-[9px] sm:text-[10px] text-text-muted">Yogyakarta, ID</span>
+      </div>
+
+      {/* Accent tag */}
+      <div className="hidden sm:block absolute -right-6 top-[26%] font-mono text-[10px] tracking-widest text-accent-2 border border-accent-2/25 bg-background/80 backdrop-blur px-2.5 py-1 rounded-full">
+        3 MVPs shipped
       </div>
     </div>
   );
