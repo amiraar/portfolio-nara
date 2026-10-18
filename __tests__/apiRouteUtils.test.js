@@ -1,9 +1,25 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
+import { createHash } from "crypto";
 
-vi.mock("@/lib/prisma", () => ({ default: {} }));
+vi.mock("@/lib/prisma", () => ({
+  default: {
+    visitor: { findUnique: vi.fn(), deleteMany: vi.fn((args) => ({ op: "visitor", args })) },
+    conversation: { deleteMany: vi.fn((args) => ({ op: "conversation", args })) },
+    message: { deleteMany: vi.fn((args) => ({ op: "message", args })) },
+    $transaction: vi.fn(),
+  },
+}));
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 
-import { getClientIP, isTrustedOrigin } from "../lib/apiRouteUtils.js";
+import prisma from "@/lib/prisma";
+import {
+  deleteVisitorData,
+  findVisitorByToken,
+  getClientIP,
+  hashVisitorToken,
+  isTrustedOrigin,
+  issueVisitorToken,
+} from "../lib/apiRouteUtils.js";
 
 const originalEnv = { ...process.env };
 
@@ -49,5 +65,57 @@ describe("isTrustedOrigin", () => {
     process.env.NEXTAUTH_URL = "https://nara.vercel.app";
     expect(isTrustedOrigin(makeReq({}))).toBe(false);
     expect(isTrustedOrigin(makeReq({ origin: "null" }))).toBe(false);
+  });
+});
+
+describe("visitor tokens", () => {
+  it("hashes tokens with SHA-256 hex (matches the SQL migration's sha256 digest)", () => {
+    const expected = createHash("sha256").update("abc", "utf8").digest("hex");
+    expect(hashVisitorToken("abc")).toBe(expected);
+  });
+
+  it("issues a raw token whose hash is what gets stored, with a future expiry", () => {
+    const { raw, hash, expiresAt } = issueVisitorToken();
+    expect(hash).toBe(hashVisitorToken(raw));
+    expect(expiresAt.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it("looks visitors up by the token hash, never the raw value", async () => {
+    prisma.visitor.findUnique.mockResolvedValue({ id: "v1", tokenExpiresAt: null });
+    await findVisitorByToken("raw-token");
+    expect(prisma.visitor.findUnique).toHaveBeenCalledWith({
+      where: { token: hashVisitorToken("raw-token") },
+    });
+  });
+
+  it("rejects an expired token", async () => {
+    prisma.visitor.findUnique.mockResolvedValue({
+      id: "v1",
+      tokenExpiresAt: new Date(Date.now() - 1000),
+    });
+    expect(await findVisitorByToken("raw-token")).toBeNull();
+  });
+
+  it("deletes messages, then conversations, then visitors in one transaction", async () => {
+    prisma.$transaction.mockResolvedValue([{ count: 5 }, { count: 2 }, { count: 1 }]);
+
+    const result = await deleteVisitorData(["v1"]);
+
+    const ops = prisma.$transaction.mock.calls[0][0];
+    expect(ops.map((o) => o.op)).toEqual(["message", "conversation", "visitor"]);
+    expect(ops[0].args).toEqual({ where: { conversation: { visitorId: { in: ["v1"] } } } });
+    expect(result).toEqual({ messages: 5, conversations: 2, visitors: 1 });
+  });
+
+  it("does nothing for an empty id list", async () => {
+    prisma.$transaction.mockClear();
+    expect(await deleteVisitorData([])).toEqual({ messages: 0, conversations: 0, visitors: 0 });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("returns null for a missing token without querying", async () => {
+    prisma.visitor.findUnique.mockClear();
+    expect(await findVisitorByToken(undefined)).toBeNull();
+    expect(prisma.visitor.findUnique).not.toHaveBeenCalled();
   });
 });

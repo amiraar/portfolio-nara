@@ -1,0 +1,6 @@
+# Reviewed false positives (format: commit:file:rule-id:line).
+# Test fixtures committed before their lines were marked `gitleaks:allow`.
+# Public RFC 6238 Appendix B seed ("12345678901234567890" in base32):
+19d99489ceaba5636b9830323df29577206f7e94:__tests__/totp.test.js:generic-api-key:11
+# Fake CRON_SECRET used only by the retention route test:
+9789f123dbb09fa5b87673a0cee9687f7046ffba:__tests__/retention.test.js:generic-api-key:22

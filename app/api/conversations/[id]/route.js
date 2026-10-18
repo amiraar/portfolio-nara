@@ -9,6 +9,7 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import {
   auditLog,
+  findVisitorByToken,
   forbiddenResponse,
   getClientIP,
   isTrustedOrigin,
@@ -25,7 +26,8 @@ import { checkRateLimit } from "@/lib/rateLimit";
  */
 export async function GET(req, { params }) {
   try {
-    const { id } = params;
+    // Next.js 16: route params are a Promise and must be awaited.
+    const { id } = await params;
 
     // Rate limit to prevent CUID enumeration brute-force.
     const ip = getClientIP(req);
@@ -48,7 +50,7 @@ export async function GET(req, { params }) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
 
-      const tokenOwner = await prisma.visitor.findUnique({ where: { token: visitorToken } });
+      const tokenOwner = await findVisitorByToken(visitorToken);
       if (!tokenOwner) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
@@ -64,13 +66,10 @@ export async function GET(req, { params }) {
       },
     });
 
-    if (!conversation) {
+    // Visitors may only read their own conversation. Missing and not-owned both
+    // return 404 so the response does not reveal that another visitor's id exists.
+    if (!conversation || (visitorOwnerId !== null && conversation.visitorId !== visitorOwnerId)) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
-    }
-
-    // Visitors may only read their own conversation
-    if (visitorOwnerId !== null && conversation.visitorId !== visitorOwnerId) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // If the owner is viewing, update ownerLastReadAt to mark messages as read.
@@ -102,7 +101,7 @@ export async function PATCH(req, { params }) {
       return forbiddenResponse();
     }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await req.json();
     const { status } = body;
 
@@ -123,7 +122,7 @@ export async function PATCH(req, { params }) {
       data: { status },
     });
 
-    auditLog(session, "conversation.status_change", { conversationId: id, status });
+    await auditLog(session, "conversation.status_change", { conversationId: id, status });
 
     return NextResponse.json({ conversation });
   } catch (error) {

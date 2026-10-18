@@ -59,7 +59,7 @@ export async function PATCH(req) {
       data: { mode },
     });
 
-    auditLog(session, "conversation.mode_change", { conversationId, mode });
+    await auditLog(session, "conversation.mode_change", { conversationId, mode });
 
     // Notify all parties about mode change via Pusher
     await emitConversationEvent(conversationId, "mode_changed", {

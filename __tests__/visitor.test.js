@@ -1,13 +1,14 @@
 /**
  * __tests__/visitor.test.js — Security tests for POST /api/visitor
  *
- * An email address is an unverified claim: anyone can type anyone's email.
- * These tests pin the rules that follow from that:
- *   - prior conversation history is released only to a caller holding the
- *     visitor's own server-issued token
- *   - the existing thread's id is withheld too, since id + cookie would allow
- *     reading that history via /api/conversations/:id
- *   - an unproven caller never receives the existing token (it is rotated)
+ * Identity is the server-issued cookie token, never the email address — an
+ * email is an unverified claim that anyone can type. These tests pin the rules
+ * that follow from that:
+ *   - a caller without a valid token always gets a NEW visitor and thread,
+ *     even when the email belongs to an existing visitor
+ *   - an existing visitor's row (token, consent record) is never modified by
+ *     someone who does not hold their token
+ *   - tokens are stored hashed and expire server-side
  *   - the token itself is never returned in the response body
  *   - consent must be explicit and its timestamp is recorded
  *
@@ -25,19 +26,23 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
+vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
+
 vi.mock("@/lib/rateLimit", () => ({
   checkRateLimit: vi.fn(),
 }));
 
-vi.mock("@/lib/apiRouteUtils", () => ({
+// Real token helpers (hashing, expiry, cookie format); only the IP lookup is stubbed.
+vi.mock("@/lib/apiRouteUtils", async (importOriginal) => ({
+  ...(await importOriginal()),
   getClientIP: vi.fn(() => "127.0.0.1"),
-  PUBLIC_VISITOR_SELECT: { id: true, name: true, email: true, createdAt: true },
 }));
 
 // ─── Imports (after mocks are registered) ─────────────────────────────────────
 
 import prisma from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { hashVisitorToken } from "@/lib/apiRouteUtils";
 import { POST } from "../app/api/visitor/route.js";
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -49,7 +54,8 @@ const VICTIM_VISITOR = {
   id: "victim-visitor-id",
   name: "Victim",
   email: VICTIM_EMAIL,
-  token: VICTIM_TOKEN,
+  token: hashVisitorToken(VICTIM_TOKEN),
+  tokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
   createdAt: new Date("2026-01-01"),
 };
 
@@ -66,7 +72,7 @@ const VICTIM_CONVERSATION = {
 /** A freshly created, empty thread. */
 const FRESH_CONVERSATION = {
   id: "fresh-conversation-id",
-  visitorId: VICTIM_VISITOR.id,
+  visitorId: "new-visitor-id",
   status: "active",
   messages: [],
 };
@@ -91,135 +97,130 @@ function makeRequest({ body, cookie = null } = {}) {
   };
 }
 
+/** Raw token value from the response's Set-Cookie header. */
+function cookieToken(res) {
+  return /visitor-token=([^;]*)/.exec(res.headers.get("Set-Cookie"))?.[1];
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 
   checkRateLimit.mockResolvedValue({ allowed: true, remaining: 4, retryAfter: 0 });
 
-  // Existing visitor found by email; update echoes the written fields.
-  prisma.visitor.findUnique.mockResolvedValue(VICTIM_VISITOR);
+  // Only the hash of the victim's raw token resolves to the victim.
+  prisma.visitor.findUnique.mockImplementation(({ where }) =>
+    Promise.resolve(where?.token === VICTIM_VISITOR.token ? VICTIM_VISITOR : null)
+  );
   prisma.visitor.update.mockImplementation(({ data }) =>
     Promise.resolve({ ...VICTIM_VISITOR, ...data })
   );
-
-  // Return the history-bearing thread ONLY when the caller did not restrict the
-  // query to empty threads. If the `messages: { none: {} }` guard is ever
-  // removed from the unverified path, that path starts receiving the victim's
-  // thread here and the leak assertions below fail.
-  prisma.conversation.findFirst.mockImplementation(({ where }) =>
-    Promise.resolve(where?.messages?.none !== undefined ? null : VICTIM_CONVERSATION)
+  prisma.visitor.create.mockImplementation(({ data }) =>
+    Promise.resolve({ id: "new-visitor-id", createdAt: new Date(), ...data })
   );
-
+  prisma.conversation.findFirst.mockResolvedValue(VICTIM_CONVERSATION);
   prisma.conversation.create.mockResolvedValue(FRESH_CONVERSATION);
 });
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-describe("POST /api/visitor — unverified email claim", () => {
-  it("does not return another visitor's message history", async () => {
+describe("POST /api/visitor — someone else's email, no valid token", () => {
+  it("creates a new visitor instead of touching the existing one", async () => {
     const res = await POST(makeRequest({ body: ATTACKER_BODY })); // no cookie
-    const data = await res.json();
 
     expect(res.status).toBe(200);
-    expect(data.conversation.messages).toEqual([]);
-    expect(JSON.stringify(data)).not.toContain(SECRET_MESSAGE);
+    expect(prisma.visitor.create).toHaveBeenCalledOnce();
+    // The victim's row — token and consent record — is never modified.
+    expect(prisma.visitor.update).not.toHaveBeenCalled();
   });
 
-  it("does not return the existing thread's id", async () => {
+  it("never looks a visitor up by email", async () => {
+    await POST(makeRequest({ body: ATTACKER_BODY }));
+
+    for (const [args] of prisma.visitor.findUnique.mock.calls) {
+      expect(args.where).not.toHaveProperty("email");
+    }
+  });
+
+  it("returns a fresh empty thread, not the victim's history or thread id", async () => {
     const res = await POST(makeRequest({ body: ATTACKER_BODY }));
     const data = await res.json();
 
-    // Holding this id plus the cookie would expose the history via
-    // GET /api/conversations/:id.
-    expect(data.conversation.id).not.toBe(VICTIM_CONVERSATION.id);
     expect(data.conversation.id).toBe(FRESH_CONVERSATION.id);
+    expect(data.conversation.messages).toEqual([]);
+    expect(JSON.stringify(data)).not.toContain(SECRET_MESSAGE);
+    expect(prisma.conversation.findFirst).not.toHaveBeenCalled();
   });
 
-  it("reuses an existing empty thread instead of creating one per request", async () => {
-    prisma.conversation.findFirst.mockResolvedValue(FRESH_CONVERSATION);
-
-    const res = await POST(makeRequest({ body: ATTACKER_BODY }));
-    await res.json();
-
-    expect(prisma.conversation.create).not.toHaveBeenCalled();
-  });
-
-  it("never hands the existing token to an unproven caller — it is rotated", async () => {
-    const res = await POST(makeRequest({ body: ATTACKER_BODY }));
-
-    const { data } = prisma.visitor.update.mock.calls[0][0];
-    expect(data.token).toEqual(expect.any(String));
-    expect(data.token).not.toBe(VICTIM_TOKEN);
-    expect(res.headers.get("Set-Cookie")).not.toContain(VICTIM_TOKEN);
-  });
-
-  it("treats a wrong token as an unverified claim", async () => {
+  it("treats a wrong token exactly like no token", async () => {
     const res = await POST(makeRequest({ body: ATTACKER_BODY, cookie: "not-the-real-token" }));
     const data = await res.json();
 
+    expect(prisma.visitor.update).not.toHaveBeenCalled();
     expect(data.conversation.id).toBe(FRESH_CONVERSATION.id);
-    expect(data.conversation.messages).toEqual([]);
-    expect(res.headers.get("Set-Cookie")).not.toContain(VICTIM_TOKEN);
+    expect(cookieToken(res)).not.toBe(VICTIM_TOKEN);
+  });
+
+  it("treats an expired token like no token", async () => {
+    prisma.visitor.findUnique.mockResolvedValue({
+      ...VICTIM_VISITOR,
+      tokenExpiresAt: new Date(Date.now() - 1000),
+    });
+
+    const res = await POST(makeRequest({ body: VICTIM_BODY, cookie: VICTIM_TOKEN }));
+    const data = await res.json();
+
+    expect(prisma.visitor.update).not.toHaveBeenCalled();
+    expect(data.conversation.id).toBe(FRESH_CONVERSATION.id);
   });
 });
 
-describe("POST /api/visitor — proven ownership", () => {
-  it("resumes the existing thread with its history when the token matches", async () => {
+describe("POST /api/visitor — valid token (same browser)", () => {
+  it("resumes the existing thread with its history", async () => {
     const res = await POST(makeRequest({ body: VICTIM_BODY, cookie: VICTIM_TOKEN }));
     const data = await res.json();
 
     expect(data.conversation.id).toBe(VICTIM_CONVERSATION.id);
     expect(data.conversation.messages).toHaveLength(1);
+    expect(prisma.visitor.create).not.toHaveBeenCalled();
   });
 
-  it("keeps the token when ownership is proven", async () => {
-    await POST(makeRequest({ body: VICTIM_BODY, cookie: VICTIM_TOKEN }));
+  it("keeps the token value and slides its expiry", async () => {
+    const res = await POST(makeRequest({ body: VICTIM_BODY, cookie: VICTIM_TOKEN }));
 
     const { data } = prisma.visitor.update.mock.calls[0][0];
     expect(data).not.toHaveProperty("token");
+    expect(data.tokenExpiresAt.getTime()).toBeGreaterThan(Date.now());
+    expect(cookieToken(res)).toBe(VICTIM_TOKEN);
   });
 });
 
-describe("POST /api/visitor — token confidentiality", () => {
-  it("never includes the visitor token in the response body", async () => {
+describe("POST /api/visitor — token storage and confidentiality", () => {
+  it("stores only the SHA-256 hash of the token it sets in the cookie", async () => {
+    const res = await POST(makeRequest({ body: ATTACKER_BODY }));
+
+    const raw = cookieToken(res);
+    const { data } = prisma.visitor.create.mock.calls[0][0];
+    expect(raw).toEqual(expect.any(String));
+    expect(data.token).toBe(hashVisitorToken(raw));
+    expect(data.token).not.toBe(raw);
+    expect(data.tokenExpiresAt).toBeInstanceOf(Date);
+  });
+
+  it("never includes the token or its hash in the response body", async () => {
     const res = await POST(makeRequest({ body: VICTIM_BODY, cookie: VICTIM_TOKEN }));
     const data = await res.json();
 
     expect(Object.keys(data.visitor).sort()).toEqual(["createdAt", "email", "id", "name"]);
     expect(JSON.stringify(data)).not.toContain(VICTIM_TOKEN);
+    expect(JSON.stringify(data)).not.toContain(VICTIM_VISITOR.token);
   });
 
-  it("still sets the token as an HttpOnly, SameSite=Strict cookie", async () => {
+  it("sets the token as an HttpOnly, SameSite=Strict cookie", async () => {
     const res = await POST(makeRequest({ body: VICTIM_BODY, cookie: VICTIM_TOKEN }));
 
     const setCookie = res.headers.get("Set-Cookie");
-    expect(setCookie).toContain(`visitor-token=${VICTIM_TOKEN}`);
     expect(setCookie).toContain("HttpOnly");
     expect(setCookie).toContain("SameSite=Strict");
-  });
-});
-
-describe("POST /api/visitor — new visitor", () => {
-  it("creates the visitor and returns an empty thread", async () => {
-    prisma.visitor.findUnique.mockResolvedValue(null);
-    prisma.visitor.create.mockResolvedValue({
-      id: "new-id",
-      name: "New Person",
-      email: "new@example.com",
-      token: "brand-new-token",
-      createdAt: new Date(),
-    });
-    prisma.conversation.findFirst.mockResolvedValue(null);
-
-    const res = await POST(
-      makeRequest({ body: { name: "New Person", email: "new@example.com", consent: true } })
-    );
-    const data = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(prisma.visitor.create).toHaveBeenCalled();
-    expect(data.visitor.email).toBe("new@example.com");
-    expect(data.visitor).not.toHaveProperty("token");
   });
 });
 
@@ -228,13 +229,10 @@ describe("POST /api/visitor — consent", () => {
     const res = await POST(makeRequest({ body: { name: "A", email: "a@example.com" } }));
 
     expect(res.status).toBe(400);
-    expect(prisma.visitor.findUnique).not.toHaveBeenCalled();
+    expect(prisma.visitor.create).not.toHaveBeenCalled();
   });
 
   it("records the consent timestamp for new visitors", async () => {
-    prisma.visitor.findUnique.mockResolvedValue(null);
-    prisma.visitor.create.mockResolvedValue({ ...VICTIM_VISITOR, id: "new-id" });
-
     await POST(makeRequest({ body: { name: "New", email: "new@example.com", consent: true } }));
 
     expect(prisma.visitor.create.mock.calls[0][0].data.consentAt).toBeInstanceOf(Date);
@@ -251,6 +249,20 @@ describe("POST /api/visitor — input validation", () => {
   it("rejects non-string input with 400 rather than throwing a 500", async () => {
     const res = await POST(
       makeRequest({ body: { name: { $ne: null }, email: ["a@b.com"], consent: true } })
+    );
+
+    expect(res.status).toBe(400);
+  });
+
+  it("stores names verbatim (no character stripping)", async () => {
+    await POST(makeRequest({ body: { name: "Sinéad O'Brien", email: "s@example.com", consent: true } }));
+
+    expect(prisma.visitor.create.mock.calls[0][0].data.name).toBe("Sinéad O'Brien");
+  });
+
+  it("rejects an email containing HTML or quote characters", async () => {
+    const res = await POST(
+      makeRequest({ body: { name: "Tester", email: "a<script>@example.com", consent: true } })
     );
 
     expect(res.status).toBe(400);

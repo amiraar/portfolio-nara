@@ -12,7 +12,7 @@ import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
 import pusher from "@/lib/pusher";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { getClientIP } from "@/lib/apiRouteUtils";
+import { findVisitorByToken, getClientIP } from "@/lib/apiRouteUtils";
 
 const CONVERSATION_PREFIX = "private-conversation-";
 
@@ -66,10 +66,7 @@ export async function POST(req) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const tokenOwner = await prisma.visitor.findUnique({
-      where: { token: visitorToken },
-      select: { id: true },
-    });
+    const tokenOwner = await findVisitorByToken(visitorToken);
 
     if (!tokenOwner) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

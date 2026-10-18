@@ -13,6 +13,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [totp, setTotp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -24,13 +25,16 @@ export default function LoginPage() {
     const result = await signIn("credentials", {
       email,
       password,
+      totp,
       redirect: false,
     });
 
     setLoading(false);
 
     if (result?.error) {
-      setError("Invalid email or password.");
+      // One generic message: never reveal which factor failed.
+      setError("Invalid email, password, or 2FA code.");
+      setTotp("");
     } else {
       router.push("/dashboard");
     }
@@ -71,6 +75,23 @@ export default function LoginPage() {
               required
               className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-sm text-text-primary placeholder-text-muted outline-none focus:border-accent transition-colors"
               placeholder="••••••••"
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <label className="block font-mono text-xs text-text-muted mb-1.5">2FA code</label>
+            {/* Required in production (enforced server-side); optional in dev without OWNER_TOTP_SECRET. */}
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="\d{6}"
+              maxLength={6}
+              value={totp}
+              onChange={(e) => setTotp(e.target.value.replace(/\D/g, ""))}
+              className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-sm text-text-primary placeholder-text-muted outline-none focus:border-accent transition-colors font-mono tracking-widest"
+              placeholder="123456"
               disabled={loading}
             />
           </div>

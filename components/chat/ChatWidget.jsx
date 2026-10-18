@@ -107,7 +107,6 @@ export default function ChatWidget() {
   /** @type {["hidden"|"bubble"|"open"]} */
   const [widgetState, setWidgetState] = useState("hidden");
   const [hasSession, setHasSession] = useState(false);
-  const [visitor, setVisitor] = useState(null);
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
@@ -115,6 +114,7 @@ export default function ChatWidget() {
   const [sendError, setSendError] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [sessionNotice, setSessionNotice] = useState(null);
   const handleSendRef = useRef(null);
   const widgetStateRef = useRef(widgetState);
   const seenEventKeysRef = useRef(new Set());
@@ -168,14 +168,13 @@ export default function ChatWidget() {
           setHasSession(true);
 
           // The HttpOnly visitor-token cookie proves identity. If it is gone
-          // (expired or cleared), the endpoint returns 401 and the visitor
-          // simply fills in the form again.
+          // (expired or cleared), the endpoint returns 401 (or 404 when the
+          // stored id is not theirs) and the visitor simply fills in the form again.
           try {
             const r = await fetch(`/api/conversations/${conversationId}`);
-            if (r.status === 401 || r.status === 403) {
+            if (r.status === 401 || r.status === 403 || r.status === 404) {
               localStorage.removeItem("nara_visitor");
               setHasSession(false);
-              setVisitor(null);
               return;
             }
             const { conversation: c } = await r.json();
@@ -275,11 +274,11 @@ export default function ChatWidget() {
   }, [conversation?.id]);
 
   /** Called when VisitorForm submits successfully */
-  function handleVisitorSubmit(v, conv) {
-    setVisitor(v);
+  function handleVisitorSubmit(_visitor, conv) {
     setConversation(conv);
     setMessages(conv.messages || []);
     setHasSession(true);
+    setSessionNotice(null);
   }
 
   /** Send a visitor message */
@@ -289,27 +288,8 @@ export default function ChatWidget() {
       setSendError(null);
       setSending(true);
 
-      async function refreshVisitorCookie() {
-        try {
-          // Only possible within the session where the visitor filled in the
-          // form (and gave consent); name/email are never read from storage.
-          if (!visitor?.name || !visitor?.email) return false;
-          const visitorPayload = { name: visitor.name, email: visitor.email, consent: true };
-
-          const cookieRes = await fetch("/api/visitor", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(visitorPayload),
-          });
-
-          return cookieRes.ok;
-        } catch {
-          return false;
-        }
-      }
-
-      async function sendChatRequest(clientTempId, retriedAuth = false) {
-        const response = await fetch("/api/chat", {
+      function sendChatRequest(clientTempId) {
+        return fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -318,15 +298,6 @@ export default function ChatWidget() {
             clientTempId,
           }),
         });
-
-        if ((response.status === 401 || response.status === 403) && !retriedAuth) {
-          const refreshed = await refreshVisitorCookie();
-          if (refreshed) {
-            return sendChatRequest(clientTempId, true);
-          }
-        }
-
-        return response;
       }
 
       // Optimistic UI: add visitor message immediately
@@ -343,6 +314,16 @@ export default function ChatWidget() {
 
       try {
         const res = await sendChatRequest(clientTempId);
+
+        // Token cookie missing or expired. Identity is never re-established
+        // silently (that would also re-submit consent on the visitor's behalf):
+        // return to the form so the visitor starts a new session explicitly.
+        if (res.status === 401) {
+          handleReset();
+          setSessionNotice("Sesi chat berakhir. Isi form lagi untuk melanjutkan.");
+          return;
+        }
+
         const data = await res.json();
 
         if (!res.ok) {
@@ -378,7 +359,7 @@ export default function ChatWidget() {
         setSending(false);
       }
     },
-    [conversation?.id, sending, visitor?.email, visitor?.name]
+    [conversation?.id, sending]
   );
 
   useEffect(() => {
@@ -397,12 +378,42 @@ export default function ChatWidget() {
 
   function handleReset() {
     localStorage.removeItem("nara_visitor");
-    setVisitor(null);
     setConversation(null);
     setMessages([]);
     setHasSession(false);
     setUnreadCount(0);
     setShowResetConfirm(false);
+  }
+
+  /** Download a copy of the visitor's own data (UU PDP right of access). */
+  async function handleDownloadData() {
+    try {
+      const res = await fetch("/api/visitor/me");
+      if (!res.ok) throw new Error(String(res.status));
+      const url = URL.createObjectURL(await res.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "data-chat-kaia.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setSendError("Gagal mengunduh data. Coba lagi.");
+    }
+    setShowResetConfirm(false);
+  }
+
+  /** Permanently delete the visitor's data and withdraw consent (UU PDP right to erasure). */
+  async function handleDeleteData() {
+    if (!window.confirm("Hapus permanen nama, email, dan semua percakapanmu? Ini tidak bisa dibatalkan.")) return;
+    try {
+      const res = await fetch("/api/visitor/me", { method: "DELETE" });
+      if (!res.ok) throw new Error(String(res.status));
+      handleReset();
+      setSessionNotice("Data kamu sudah dihapus.");
+    } catch {
+      setSendError("Gagal menghapus data. Coba lagi atau hubungi email di Kebijakan Privasi.");
+      setShowResetConfirm(false);
+    }
   }
 
   // --- Bubble ---
@@ -436,7 +447,7 @@ export default function ChatWidget() {
               <div className="relative">
                 {showResetConfirm ? (
                   <div className="absolute right-0 top-8 z-10 bg-surface border border-border rounded-xl shadow-xl p-3 w-44">
-                    <p className="text-[11px] text-text-muted mb-2 leading-snug">Mulai percakapan baru? Riwayat akan dihapus.</p>
+                    <p className="text-[11px] text-text-muted mb-2 leading-snug">Tutup sesi chat ini? Riwayat tetap tersimpan di server; pakai &quot;Hapus data saya&quot; untuk menghapusnya.</p>
                     <div className="flex gap-2">
                       <button onClick={handleReset}
                         className="flex-1 text-[11px] font-mono bg-red-500/15 text-red-400 border border-red-400/20 rounded-lg py-1 hover:bg-red-500/25 transition-colors">
@@ -445,6 +456,16 @@ export default function ChatWidget() {
                       <button onClick={() => setShowResetConfirm(false)}
                         className="flex-1 text-[11px] font-mono border border-border text-text-muted rounded-lg py-1 hover:border-accent/30 transition-colors">
                         Batal
+                      </button>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-border flex flex-col gap-1.5">
+                      <button onClick={handleDownloadData}
+                        className="text-left text-[11px] text-text-muted hover:text-accent transition-colors">
+                        Unduh data saya
+                      </button>
+                      <button onClick={handleDeleteData}
+                        className="text-left text-[11px] text-red-400/80 hover:text-red-400 transition-colors">
+                        Hapus data saya
                       </button>
                     </div>
                   </div>
@@ -499,7 +520,14 @@ export default function ChatWidget() {
               <MessageInput onSend={handleSend} disabled={sending} />
             </>
           ) : (
-            <VisitorForm onSubmit={handleVisitorSubmit} />
+            <>
+              {sessionNotice && (
+                <p className="mx-5 mt-4 -mb-1 px-3 py-2 text-[11px] text-text-muted bg-accent/6 border border-border rounded-lg leading-snug">
+                  {sessionNotice}
+                </p>
+              )}
+              <VisitorForm onSubmit={handleVisitorSubmit} />
+            </>
           )}
         </div>
       )}

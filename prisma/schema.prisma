@@ -14,13 +14,20 @@ datasource db {
 model Visitor {
   id            String         @id @default(cuid())
   name          String
-  email         String         @unique
-  /// Server-issued token stored in HttpOnly cookie for ownership verification
+  /// Unverified, self-reported contact address. Not an identity key: several
+  /// Visitor rows may share one email (identity is the cookie token only).
+  email         String
+  /// SHA-256 hex of the server-issued token. The raw token lives only in the
+  /// visitor's HttpOnly cookie, so a database leak does not yield usable tokens.
   token         String?        @unique
+  /// Server-side expiry of `token` (mirrors the cookie Max-Age).
+  tokenExpiresAt DateTime?
   /// When the visitor last gave explicit consent to data processing (UU PDP evidence)
   consentAt     DateTime?
   createdAt     DateTime       @default(now())
   conversations Conversation[]
+
+  @@index([email])
 }
 
 model Conversation {
@@ -55,6 +62,33 @@ model PortfolioContent {
   section   String   @unique
   data      Json
   updatedAt DateTime @updatedAt
+}
+
+/// Single-row state for the owner login (id is always "owner").
+model OwnerAuthState {
+  id            String    @id @default("owner")
+  /// Sessions whose loginAt is at or before this instant are rejected
+  /// (set on sign-out — NextAuth JWT sessions cannot otherwise be revoked).
+  revokedBefore DateTime?
+  /// Last accepted TOTP time step; a code for this step or earlier is a replay.
+  lastTotpStep  Int?
+}
+
+/// Durable audit trail: owner actions and authentication events.
+/// Never store message bodies or visitor PII in `details`. Rows older than
+/// 90 days are deleted by /api/cron/retention (`ip` is personal data).
+model AuditEvent {
+  id      String   @id @default(cuid())
+  at      DateTime @default(now())
+  /// Owner email for owner actions, "anonymous" for unauthenticated attempts
+  actor   String
+  /// e.g. "auth.login_failed", "portfolio.update"
+  action  String
+  ip      String?
+  details Json?
+
+  @@index([at])
+  @@index([action, at])
 }
 
 /// Persistent rate-limit counters — replaces the unreliable in-memory store.
