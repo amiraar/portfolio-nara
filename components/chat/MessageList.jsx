@@ -81,9 +81,9 @@ export default function MessageList({ messages, isTyping }) {
       {messages.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-6 flex-1 py-8 text-center">
           <div>
-            <p className="text-sm text-text-primary font-medium">Halo! Saya Kaia 👋</p>
+            <p className="text-sm text-text-primary font-medium">Hi! I'm Kaia 👋</p>
             <p className="text-xs text-text-muted mt-1 leading-relaxed max-w-[220px]">
-              Ada yang ingin kamu tanyakan tentang Amirul?
+              What would you like to know about Amirul?
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
