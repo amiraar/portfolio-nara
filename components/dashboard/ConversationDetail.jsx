@@ -9,6 +9,13 @@
 import { useEffect, useRef, useState, memo } from "react";
 import { format } from "date-fns";
 import { clsx } from "clsx";
+import ConfirmModal from "./ConfirmModal";
+
+const CONFIRM_COPY = {
+  takeover: { title: "Take over this conversation?", message: "Kaia will stop responding." },
+  handback: { title: "Hand back to Kaia?", message: "She will resume responding." },
+  resolve: { title: "Mark this conversation as resolved?" },
+};
 
 /**
  * @param {{
@@ -30,7 +37,7 @@ export default function ConversationDetail({
   isTakingOver,
   loadingMessages = false,
 }) {
-  const [showConfirm, setShowConfirm] = useState(null); // "takeover" | "handback" | null
+  const [showConfirm, setShowConfirm] = useState(null); // "takeover" | "handback" | "resolve" | null
 
   const isHuman = conversation.mode === "human";
   const isResolved = conversation.status === "resolved";
@@ -104,32 +111,13 @@ export default function ConversationDetail({
         </div>
       </div>
 
-      {/* Confirm dialog */}
-      {showConfirm && (
-        <div className="flex-shrink-0 mx-4 mt-3 p-3 rounded-lg border border-border bg-surface flex items-center justify-between gap-3">
-          <p className="text-xs text-text-muted">
-            {showConfirm === "takeover"
-              ? "Takeover? Kaia will stop responding."
-              : showConfirm === "handback"
-              ? "Hand back to Kaia? She will resume responding."
-              : "Mark this conversation as resolved?"}
-          </p>
-          <div className="flex gap-2 flex-shrink-0">
-            <button
-              onClick={() => handleAction(showConfirm)}
-              className="text-xs text-accent border border-accent/30 px-2.5 py-1 rounded hover:bg-accent/5"
-            >
-              Confirm
-            </button>
-            <button
-              onClick={() => setShowConfirm(null)}
-              className="text-xs text-text-muted border border-border px-2.5 py-1 rounded hover:border-text-muted/50"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={Boolean(showConfirm)}
+        title={CONFIRM_COPY[showConfirm]?.title ?? ""}
+        message={CONFIRM_COPY[showConfirm]?.message}
+        onCancel={() => setShowConfirm(null)}
+        onConfirm={() => handleAction(showConfirm)}
+      />
 
       {/* Messages */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-5 space-y-3">

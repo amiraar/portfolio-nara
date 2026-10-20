@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from "react";
 import { Field, inputCls, textareaCls, TagInput, BtnDanger, BtnSecondary } from "./primitives";
+import ConfirmModal from "../ConfirmModal";
 
 const EMPTY_PROJECT = { name: "", type: "", company: "", description: "", tags: [], link: "", highlight: false, metric: "" };
 const EMPTY_CASE_STUDY = { problem: "", approach: [], result: "" };
@@ -21,6 +22,7 @@ function textToApproach(text) {
 export default function ProjectsEditor({ data, onChange }) {
   const [expandedIdx, setExpandedIdx] = useState(null);
   const [pendingScrollIdx, setPendingScrollIdx] = useState(null);
+  const [pendingDeleteIdx, setPendingDeleteIdx] = useState(null);
 
   useEffect(() => {
     if (pendingScrollIdx === null) return;
@@ -33,12 +35,11 @@ export default function ProjectsEditor({ data, onChange }) {
 
   function updateItem(i, updated) { const next = [...data]; next[i] = updated; onChange(next); }
   function deleteItem(i) {
-    const item = data[i];
-    const label = item?.name || item?.company || `item #${i + 1}`;
-    if (!window.confirm(`Hapus project "${label}"?`)) return;
+    setPendingDeleteIdx(null);
     onChange(data.filter((_, idx) => idx !== i));
     if (expandedIdx === i) setExpandedIdx(null);
   }
+  const pendingDelete = pendingDeleteIdx === null ? null : data[pendingDeleteIdx];
   function addItem() {
     const nextIdx = data.length;
     onChange([...data, { ...EMPTY_PROJECT, tags: [] }]);
@@ -68,7 +69,7 @@ export default function ProjectsEditor({ data, onChange }) {
             <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
               <BtnSecondary onClick={() => move(i, -1)} disabled={i === 0}>↑</BtnSecondary>
               <BtnSecondary onClick={() => move(i, 1)} disabled={i === data.length - 1}>↓</BtnSecondary>
-              <BtnDanger onClick={() => deleteItem(i)}>Hapus</BtnDanger>
+              <BtnDanger onClick={() => setPendingDeleteIdx(i)}>Hapus</BtnDanger>
             </div>
             <span className="text-text-muted text-xs">{expandedIdx === i ? "▲" : "▼"}</span>
           </div>
@@ -150,6 +151,16 @@ export default function ProjectsEditor({ data, onChange }) {
         className="w-full font-mono text-xs text-accent border border-accent/30 border-dashed py-3 rounded-xl hover:bg-accent/5 transition-colors">
         + Tambah Project
       </button>
+      <ConfirmModal
+        open={pendingDelete !== null}
+        title={`Hapus project "${pendingDelete?.name || pendingDelete?.company || `item #${pendingDeleteIdx + 1}`}"?`}
+        message="Project dihapus dari editor. Klik Save untuk menerapkannya ke situs."
+        cancelLabel="Batal"
+        confirmLabel="Hapus"
+        danger
+        onCancel={() => setPendingDeleteIdx(null)}
+        onConfirm={() => deleteItem(pendingDeleteIdx)}
+      />
     </div>
   );
 }

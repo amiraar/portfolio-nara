@@ -10,6 +10,7 @@ import ProjectsEditor from "./editors/ProjectsEditor";
 import SkillsEditor from "./editors/SkillsEditor";
 import EducationEditor from "./editors/EducationEditor";
 import ContactEditor from "./editors/ContactEditor";
+import ConfirmModal from "./ConfirmModal";
 import KaiaConfigEditor from "./editors/KaiaConfigEditor";
 
 const DEFAULTS = PORTFOLIO_DEFAULTS;
@@ -30,6 +31,7 @@ export default function ContentEditor({ section, apiSection, onDirtyChange }) {
   const [dirty, setDirty] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // "saved" | "error"
   const [validationErrors, setValidationErrors] = useState([]);
+  const [showDefaultsConfirm, setShowDefaultsConfirm] = useState(false);
   const timerRef = useRef(null);
 
   const loadSection = useCallback(async () => {
@@ -175,13 +177,22 @@ export default function ContentEditor({ section, apiSection, onDirtyChange }) {
   }
 
   function handleLoadCodeDefaults() {
-    if (!window.confirm("Ganti isi editor dengan default dari kode? Perubahan belum tersimpan akan hilang. Klik Save setelah meninjau untuk menerapkannya ke situs.")) return;
+    setShowDefaultsConfirm(false);
     handleChange(DEFAULTS[apiSection]);
     setValidationErrors([]);
   }
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      <ConfirmModal
+        open={showDefaultsConfirm}
+        title="Ganti isi editor dengan default dari kode?"
+        message="Perubahan belum tersimpan akan hilang. Klik Save setelah meninjau untuk menerapkannya ke situs."
+        cancelLabel="Batal"
+        confirmLabel="Ganti"
+        onCancel={() => setShowDefaultsConfirm(false)}
+        onConfirm={handleLoadCodeDefaults}
+      />
       {/* Toolbar */}
       <div className="flex-shrink-0 flex items-center justify-between gap-3 px-5 py-3 border-b border-border bg-surface/30">
         <div className="flex items-center gap-2 min-w-0">
@@ -198,7 +209,7 @@ export default function ContentEditor({ section, apiSection, onDirtyChange }) {
 
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
-            onClick={handleLoadCodeDefaults}
+            onClick={() => setShowDefaultsConfirm(true)}
             disabled={loading}
             title="Muat isi default dari lib/portfolioDefaults.js (belum tersimpan sampai klik Save)"
             className="font-mono text-[11px] text-text-muted border border-border px-3 py-1.5 rounded-lg hover:border-accent/40 hover:text-accent transition-colors disabled:opacity-40"

@@ -7,12 +7,14 @@
 
 import { useState, useEffect } from "react";
 import { Field, inputCls, textareaCls, TagInput, BtnDanger, BtnSecondary, PeriodInput } from "./primitives";
+import ConfirmModal from "../ConfirmModal";
 
 const EMPTY_EXP = { company: "", role: "", period: "", description: "", tags: [], current: false };
 
 export default function ExperienceEditor({ data, onChange }) {
   const [expandedIdx, setExpandedIdx] = useState(null);
   const [pendingScrollIdx, setPendingScrollIdx] = useState(null);
+  const [pendingDeleteIdx, setPendingDeleteIdx] = useState(null);
 
   useEffect(() => {
     if (pendingScrollIdx === null) return;
@@ -25,12 +27,11 @@ export default function ExperienceEditor({ data, onChange }) {
 
   function updateItem(i, updated) { const next = [...data]; next[i] = updated; onChange(next); }
   function deleteItem(i) {
-    const item = data[i];
-    const label = item?.role || item?.company || `item #${i + 1}`;
-    if (!window.confirm(`Hapus experience "${label}"?`)) return;
+    setPendingDeleteIdx(null);
     onChange(data.filter((_, idx) => idx !== i));
     if (expandedIdx === i) setExpandedIdx(null);
   }
+  const pendingDelete = pendingDeleteIdx === null ? null : data[pendingDeleteIdx];
   function addItem() {
     const nextIdx = data.length;
     onChange([...data, { ...EMPTY_EXP, tags: [] }]);
@@ -60,7 +61,7 @@ export default function ExperienceEditor({ data, onChange }) {
             <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
               <BtnSecondary onClick={() => move(i, -1)} disabled={i === 0}>↑</BtnSecondary>
               <BtnSecondary onClick={() => move(i, 1)} disabled={i === data.length - 1}>↓</BtnSecondary>
-              <BtnDanger onClick={() => deleteItem(i)}>Hapus</BtnDanger>
+              <BtnDanger onClick={() => setPendingDeleteIdx(i)}>Hapus</BtnDanger>
             </div>
             <span className="text-text-muted text-xs">{expandedIdx === i ? "▲" : "▼"}</span>
           </div>
@@ -93,6 +94,16 @@ export default function ExperienceEditor({ data, onChange }) {
         className="w-full font-mono text-xs text-accent border border-accent/30 border-dashed py-3 rounded-xl hover:bg-accent/5 transition-colors">
         + Tambah Experience
       </button>
+      <ConfirmModal
+        open={pendingDelete !== null}
+        title={`Hapus experience "${pendingDelete?.role || pendingDelete?.company || `item #${pendingDeleteIdx + 1}`}"?`}
+        message="Experience dihapus dari editor. Klik Save untuk menerapkannya ke situs."
+        cancelLabel="Batal"
+        confirmLabel="Hapus"
+        danger
+        onCancel={() => setPendingDeleteIdx(null)}
+        onConfirm={() => deleteItem(pendingDeleteIdx)}
+      />
     </div>
   );
 }

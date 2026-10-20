@@ -9,6 +9,7 @@ import ConversationDetail from "@/components/dashboard/ConversationDetail";
 import OwnerReply from "@/components/dashboard/OwnerReply";
 import ContentEditor from "@/components/dashboard/ContentEditor";
 import MessageChart from "@/components/dashboard/MessageChart";
+import ConfirmModal from "@/components/dashboard/ConfirmModal";
 import { getPusherClient } from "@/lib/pusherClient";
 
 const POLL_INTERVAL = 30_000;
@@ -350,24 +351,15 @@ export default function DashboardPage() {
   return (
     <div className="h-screen overflow-hidden bg-background flex flex-col">
       {/* ── Unsaved changes confirmation modal ─────────────────── */}
-      {pendingNav && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-border bg-surface p-5 shadow-2xl">
-            <h3 className="font-display text-base font-medium text-text-primary">Discard unsaved changes?</h3>
-            <p className="text-xs text-text-muted mt-2 leading-relaxed">
-              You have unsaved edits in this section. Navigating away will discard them.
-            </p>
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button onClick={cancelPendingNav} className="font-mono text-xs text-text-muted border border-border px-3 py-1.5 rounded-lg hover:border-text-muted/40 transition-colors">
-                Stay
-              </button>
-              <button onClick={confirmPendingNav} className="font-mono text-xs bg-accent text-background px-4 py-1.5 rounded-lg hover:bg-accent-hover transition-colors">
-                Discard & continue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={Boolean(pendingNav)}
+        title="Discard unsaved changes?"
+        message="You have unsaved edits in this section. Navigating away will discard them."
+        cancelLabel="Stay"
+        confirmLabel="Discard & continue"
+        onCancel={cancelPendingNav}
+        onConfirm={confirmPendingNav}
+      />
 
       {/* ── Top bar ────────────────────────────────────────────── */}
       <header className="flex-shrink-0 h-12 bg-surface border-b border-border flex items-center justify-between px-4 gap-3">
