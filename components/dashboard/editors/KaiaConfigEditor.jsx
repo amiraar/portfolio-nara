@@ -5,11 +5,13 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Field, textareaCls } from "./primitives";
+import { ModalShell } from "../ConfirmModal";
 
 export default function KaiaConfigEditor({ data, onChange }) {
   const [showPreview, setShowPreview] = useState(false);
+  const closePreview = useCallback(() => setShowPreview(false), []);
 
   function handleChange(e) {
     onChange({ ...data, systemPrompt: e.target.value });
@@ -42,38 +44,34 @@ export default function KaiaConfigEditor({ data, onChange }) {
 
       {/* Preview modal */}
       {showPreview && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
-          onClick={() => setShowPreview(false)}
+        <ModalShell
+          onClose={closePreview}
+          labelledBy="kaia-preview-title"
+          className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden"
         >
-          <div
-            className="bg-surface border border-border rounded-xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-border flex-shrink-0">
-              <span className="font-mono text-xs text-text-muted uppercase tracking-wider">
-                System Prompt Preview
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowPreview(false)}
-                className="font-mono text-xs text-text-muted hover:text-text-primary transition-colors"
-              >
-                Tutup
-              </button>
-            </div>
-
-            {/* Modal body */}
-            <div className="overflow-y-auto p-5 flex-1">
-              <pre className="font-mono text-xs text-text-primary whitespace-pre-wrap leading-relaxed">
-                {(data.systemPrompt ?? "").replace(/\\n/g, "\n") || (
-                  <span className="text-text-muted italic">Prompt kosong.</span>
-                )}
-              </pre>
-            </div>
+          {/* Modal header */}
+          <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border flex-shrink-0">
+            <h3 id="kaia-preview-title" className="font-display text-base font-medium text-text-primary">
+              System Prompt Preview
+            </h3>
+            <button
+              type="button"
+              onClick={closePreview}
+              className="font-mono text-xs text-text-muted border border-border px-3 py-1.5 rounded-lg hover:border-text-muted/40 transition-colors"
+            >
+              Tutup
+            </button>
           </div>
-        </div>
+
+          {/* Modal body */}
+          <div className="overflow-y-auto p-5 flex-1">
+            <pre className="font-mono text-xs text-text-primary whitespace-pre-wrap leading-relaxed">
+              {(data.systemPrompt ?? "").replace(/\\n/g, "\n") || (
+                <span className="text-text-muted italic">Prompt kosong.</span>
+              )}
+            </pre>
+          </div>
+        </ModalShell>
       )}
     </div>
   );
