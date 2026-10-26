@@ -1,12 +1,13 @@
 /**
  * app/api/cron/retention/route.js — Daily data-retention job (Vercel Cron).
- * GET → deletes visitor data and audit events older than the retention period.
+ * GET → deletes visitor data, audit events and app logs older than the retention period.
  *
  * Retention (stated in app/privacy/page.jsx):
  *   - Visitors with all their conversations and messages: 90 days after the
  *     last activity (newest of visitor creation, consent refresh, and
  *     conversation update — every message touches Conversation.updatedAt).
  *   - AuditEvent rows (contain IP addresses): 90 days.
+ *   - AppLog rows (server errors): 90 days.
  *
  * Auth: Vercel sends `Authorization: Bearer <CRON_SECRET>` when the CRON_SECRET
  * environment variable is set. Idempotent, so duplicate or missed runs are safe.
@@ -15,6 +16,7 @@
 
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { logError } from "@/lib/logger";
 import { deleteVisitorData } from "@/lib/apiRouteUtils";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +34,7 @@ export async function GET(req) {
 
   try {
     const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
-    const totals = { visitors: 0, conversations: 0, messages: 0, auditEvents: 0 };
+    const totals = { visitors: 0, conversations: 0, messages: 0, auditEvents: 0, appLogs: 0 };
 
     for (let batch = 0; batch < MAX_BATCHES; batch += 1) {
       const stale = await prisma.visitor.findMany({
@@ -56,10 +58,13 @@ export async function GET(req) {
     const audit = await prisma.auditEvent.deleteMany({ where: { at: { lt: cutoff } } });
     totals.auditEvents = audit.count;
 
+    const logs = await prisma.appLog.deleteMany({ where: { at: { lt: cutoff } } });
+    totals.appLogs = logs.count;
+
     console.info("[cron/retention] completed", { cutoff: cutoff.toISOString(), ...totals });
     return NextResponse.json({ ok: true, cutoff: cutoff.toISOString(), deleted: totals });
   } catch (error) {
-    console.error("[cron/retention] failed", { error: error?.message ?? String(error) });
+    await logError("cron/retention", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

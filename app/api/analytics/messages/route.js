@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { logError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export async function GET() {
 
     return NextResponse.json({ data });
   } catch (error) {
-    console.error("[GET /api/analytics/messages]", error);
+    await logError("GET /api/analytics/messages", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

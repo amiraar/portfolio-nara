@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { logError } from "@/lib/logger";
 import {
   auditLog,
   findVisitorByToken,
@@ -82,7 +83,7 @@ export async function GET(req, { params }) {
 
     return NextResponse.json({ conversation });
   } catch (error) {
-    console.error("[GET /api/conversations/:id]", error);
+    await logError("GET /api/conversations/:id", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -126,7 +127,7 @@ export async function PATCH(req, { params }) {
 
     return NextResponse.json({ conversation });
   } catch (error) {
-    console.error("[PATCH /api/conversations/:id]", error);
+    await logError("PATCH /api/conversations/:id", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

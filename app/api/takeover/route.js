@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { logError } from "@/lib/logger";
 import { emitConversationEvent } from "@/lib/pusher";
 import {
   auditLog,
@@ -69,7 +70,7 @@ export async function PATCH(req) {
 
     return NextResponse.json({ conversation });
   } catch (error) {
-    console.error("[PATCH /api/takeover]", error);
+    await logError("PATCH /api/takeover", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

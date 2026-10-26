@@ -91,6 +91,20 @@ model AuditEvent {
   @@index([action, at])
 }
 
+/// Server error log, shown in the dashboard Logs view (lib/logger.js).
+/// Never store message bodies or visitor PII. Rows older than 90 days are
+/// deleted by /api/cron/retention.
+model AppLog {
+  id      String   @id @default(cuid())
+  at      DateTime @default(now())
+  /// Where the error happened, e.g. "POST /api/chat", "kaia"
+  source  String
+  message String
+  details Json?
+
+  @@index([at])
+}
+
 /// Persistent rate-limit counters — replaces the unreliable in-memory store.
 /// key = "<scope>:<identifier>:<maxRequests>:<windowSec>"
 /// Atomic upsert via raw SQL ensures correctness across serverless instances.

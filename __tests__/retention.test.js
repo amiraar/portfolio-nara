@@ -8,6 +8,7 @@ vi.mock("@/lib/prisma", () => ({
   default: {
     visitor: { findMany: vi.fn() },
     auditEvent: { deleteMany: vi.fn() },
+    appLog: { deleteMany: vi.fn(), create: vi.fn() },
   },
 }));
 
@@ -30,6 +31,7 @@ beforeEach(() => {
   process.env.CRON_SECRET = SECRET;
   prisma.visitor.findMany.mockResolvedValue([]);
   prisma.auditEvent.deleteMany.mockResolvedValue({ count: 0 });
+  prisma.appLog.deleteMany.mockResolvedValue({ count: 0 });
   deleteVisitorData.mockResolvedValue({ messages: 0, conversations: 0, visitors: 0 });
 });
 
@@ -70,10 +72,11 @@ describe("GET /api/cron/retention — deletion", () => {
     expect(where.conversations).toEqual({ none: { updatedAt: { gte: where.createdAt.lt } } });
   });
 
-  it("deletes the stale visitors' data and old audit events, and reports counts", async () => {
+  it("deletes the stale visitors' data, old audit events and old app logs, and reports counts", async () => {
     prisma.visitor.findMany.mockResolvedValueOnce([{ id: "v1" }, { id: "v2" }]);
     deleteVisitorData.mockResolvedValue({ messages: 7, conversations: 2, visitors: 2 });
     prisma.auditEvent.deleteMany.mockResolvedValue({ count: 3 });
+    prisma.appLog.deleteMany.mockResolvedValue({ count: 4 });
 
     const res = await GET(makeRequest(`Bearer ${SECRET}`));
     const data = await res.json();
@@ -83,7 +86,10 @@ describe("GET /api/cron/retention — deletion", () => {
     expect(prisma.auditEvent.deleteMany).toHaveBeenCalledWith({
       where: { at: { lt: expect.any(Date) } },
     });
-    expect(data.deleted).toEqual({ visitors: 2, conversations: 2, messages: 7, auditEvents: 3 });
+    expect(prisma.appLog.deleteMany).toHaveBeenCalledWith({
+      where: { at: { lt: expect.any(Date) } },
+    });
+    expect(data.deleted).toEqual({ visitors: 2, conversations: 2, messages: 7, auditEvents: 3, appLogs: 4 });
   });
 
   it("keeps going in batches until fewer than a full batch remain", async () => {

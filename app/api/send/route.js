@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { logError } from "@/lib/logger";
 import { emitConversationEvent } from "@/lib/pusher";
 import {
   auditLog,
@@ -83,7 +84,7 @@ export async function POST(req) {
 
     return NextResponse.json({ message });
   } catch (error) {
-    console.error("[POST /api/send]", error);
+    await logError("POST /api/send", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

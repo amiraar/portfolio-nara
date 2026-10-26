@@ -10,6 +10,7 @@
 
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { logError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rateLimit";
 import {
   findVisitorByToken,
@@ -142,7 +143,7 @@ export async function POST(req) {
     response.headers.set("Set-Cookie", visitorTokenCookie(rawToken));
     return response;
   } catch (error) {
-    console.error("[POST /api/visitor]", error);
+    await logError("POST /api/visitor", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

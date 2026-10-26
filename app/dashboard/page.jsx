@@ -10,6 +10,7 @@ import OwnerReply from "@/components/dashboard/OwnerReply";
 import ContentEditor from "@/components/dashboard/ContentEditor";
 import MessageChart from "@/components/dashboard/MessageChart";
 import ConfirmModal from "@/components/dashboard/ConfirmModal";
+import LogViewer from "@/components/dashboard/LogViewer";
 import { getPusherClient } from "@/lib/pusherClient";
 
 const POLL_INTERVAL = 30_000;
@@ -43,6 +44,7 @@ const NAV_GROUPS = [
     group: "Settings",
     items: [
       { key: "kaia_config", label: "AI Assistant", apiSection: "kaia_config" },
+      { key: "logs",        label: "Logs",         apiSection: null },
     ],
   },
 ];
@@ -67,6 +69,7 @@ function NavIcon({ itemKey, size = 13 }) {
     case "education":     return <svg {...s}><path d="M1 5.5l7-3.5 7 3.5-7 3.5z"/><path d="M15 5.5v4"/><path d="M4 7v5c0 1.7 1.8 3 4 3s4-1.3 4-3V7"/></svg>;
     case "contact":       return <svg {...s}><rect x="1" y="3" width="14" height="10" rx="1"/><path d="M1 5l7 5 7-5"/></svg>;
     case "kaia_config":   return <svg {...s}><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.2 3.2l1.4 1.4M11.4 11.4l1.4 1.4M3.2 12.8l1.4-1.4M11.4 4.6l1.4-1.4"/><circle cx="8" cy="8" r="3"/></svg>;
+    case "logs":          return <svg {...s}><rect x="2" y="1" width="12" height="14" rx="1"/><path d="M5 5h6M5 8h6M5 11h4"/></svg>;
     default:              return <svg {...s}><circle cx="8" cy="8" r="6"/></svg>;
   }
 }
@@ -654,6 +657,13 @@ export default function DashboardPage() {
                 apiSection={activeNavItem.apiSection}
                 onDirtyChange={setIsEditorDirty}
               />
+            </div>
+          )}
+
+          {/* ── LOGS VIEW ─────────────────────────────────────────── */}
+          {activeView === "logs" && (
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <LogViewer />
             </div>
           )}
         </main>

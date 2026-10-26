@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { logError } from "@/lib/logger";
 import pusher from "@/lib/pusher";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { findVisitorByToken, getClientIP } from "@/lib/apiRouteUtils";
@@ -84,7 +85,7 @@ export async function POST(req) {
     const auth = pusher.authorizeChannel(socketId, channelName);
     return NextResponse.json(auth);
   } catch (error) {
-    console.error("[POST /api/pusher/auth]", error);
+    await logError("POST /api/pusher/auth", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
