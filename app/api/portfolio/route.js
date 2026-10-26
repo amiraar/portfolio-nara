@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { logError } from "@/lib/logger";
 import { auditLog, forbiddenResponse, isTrustedOrigin } from "@/lib/apiRouteUtils";
 
 /** Sections that hold owner-only configuration and must never be served publicly. */
@@ -42,7 +43,7 @@ export async function GET(req) {
     }
     return NextResponse.json({ content: result });
   } catch (error) {
-    console.error("[GET /api/portfolio]", error);
+    await logError("GET /api/portfolio", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -96,7 +97,7 @@ export async function PATCH(req) {
 
     return NextResponse.json({ content });
   } catch (error) {
-    console.error("[PATCH /api/portfolio]", error);
+    await logError("PATCH /api/portfolio", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

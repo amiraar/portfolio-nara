@@ -13,6 +13,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import prisma from "@/lib/prisma";
+import { logError } from "@/lib/logger";
 import { PUBLIC_VISITOR_SELECT } from "@/lib/apiRouteUtils";
 
 const PAGE_SIZE = 20;
@@ -91,7 +92,7 @@ export async function GET(req) {
 
     return NextResponse.json({ conversations: enriched, nextCursor });
   } catch (error) {
-    console.error("[GET /api/conversations]", error);
+    await logError("GET /api/conversations", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

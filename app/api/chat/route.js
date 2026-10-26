@@ -12,6 +12,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import prisma from "@/lib/prisma";
+import { logError } from "@/lib/logger";
 import { getKaiaReply } from "@/lib/gemini";
 import { checkMultiRateLimit } from "@/lib/rateLimit";
 import pusher, { emitConversationEvent } from "@/lib/pusher";
@@ -259,14 +260,12 @@ export async function POST(req) {
     try {
       replyText = await getKaiaReply(history, trimmed, { correlationId });
     } catch (aiError) {
-      console.error("[Kaia fallback triggered]", {
+      await logError("Kaia fallback triggered", aiError, {
         correlationId,
         conversationId,
         model: process.env.AI_MODEL ?? "unset",
         status: aiError?.status ?? aiError?.response?.status ?? "unknown",
         code: aiError?.code ?? "unknown",
-        message: aiError?.message ?? String(aiError),
-        timestamp: new Date().toISOString(),
       });
       replyText = AI_FALLBACK_MESSAGE;
     }
@@ -302,11 +301,10 @@ export async function POST(req) {
       });
     } catch (emitError) {
       assistantRealtimeDelivered = false;
-      console.error("[chat] Assistant realtime emit failed", {
+      await logError("chat realtime emit", emitError, {
         correlationId,
         conversationId,
         messageId: assistantMessage.id,
-        error: emitError?.message ?? String(emitError),
       });
     }
 
@@ -326,10 +324,7 @@ export async function POST(req) {
     res.headers.set("X-RateLimit-Remaining", String(remaining));
     return withCorrelation(res, correlationId);
   } catch (error) {
-    console.error("[POST /api/chat]", {
-      correlationId,
-      error: error?.message ?? String(error),
-    });
+    await logError("POST /api/chat", error, { correlationId });
     return withCorrelation(NextResponse.json({ error: "Internal server error" }, { status: 500 }), correlationId);
   }
 }

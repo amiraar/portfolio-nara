@@ -9,6 +9,7 @@
 
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { logError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rateLimit";
 import {
   deleteVisitorData,
@@ -72,7 +73,7 @@ export async function GET(req) {
       { headers: { "Content-Disposition": 'attachment; filename="data-chat-kaia.json"' } }
     );
   } catch (error) {
-    console.error("[GET /api/visitor/me]", error);
+    await logError("GET /api/visitor/me", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -91,7 +92,7 @@ export async function DELETE(req) {
     response.headers.set("Set-Cookie", visitorTokenCookie("", 0));
     return response;
   } catch (error) {
-    console.error("[DELETE /api/visitor/me]", error);
+    await logError("DELETE /api/visitor/me", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
