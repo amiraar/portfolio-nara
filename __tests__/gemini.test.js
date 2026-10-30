@@ -64,6 +64,16 @@ describe("getKaiaReply guardrails", () => {
     expect(systemInstruction.endsWith(GUARDRAIL_RULES)).toBe(true);
   });
 
+  it("limits thinking so replies are not cut off by the output token cap", async () => {
+    replyWith("Halo!");
+
+    await getKaiaReply([], "Halo");
+
+    const { generationConfig } = getGenerativeModel.mock.calls[0][0];
+    expect(generationConfig.maxOutputTokens).toBe(1024);
+    expect(generationConfig.thinkingConfig).toEqual({ thinkingLevel: "low" });
+  });
+
   it("sends the visitor message with injected labels removed", async () => {
     replyWith("Halo!");
 
