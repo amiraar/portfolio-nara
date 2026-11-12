@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { PORTFOLIO_DEFAULTS } from "../lib/portfolioDefaults.js";
 
 describe("PORTFOLIO_DEFAULTS", () => {
@@ -64,5 +66,21 @@ describe("PORTFOLIO_DEFAULTS", () => {
     expect(education).toHaveProperty("email");
     expect(education).toHaveProperty("contactHeading");
     expect(education).toHaveProperty("footerCopy");
+  });
+
+  it("every project screenshot exists in public/", () => {
+    for (const project of PORTFOLIO_DEFAULTS.projects) {
+      for (const src of project.screenshots ?? []) {
+        expect(existsSync(path.join(process.cwd(), "public", src)), `${project.name}: ${src}`).toBe(true);
+      }
+    }
+  });
+
+  // Company work is confidential: products, clients, and internal domains stay unnamed.
+  it("does not name confidential work projects or clients", () => {
+    const text = JSON.stringify(PORTFOLIO_DEFAULTS);
+    for (const name of [/\bracker\b/i, /quickcue/i, /cptool/i, /qaleido/i, /\bwolf\b/i, /autonomist/i, /lapak/i, /riot games/i, /softwareseni\.co/i]) {
+      expect(text).not.toMatch(name);
+    }
   });
 });
