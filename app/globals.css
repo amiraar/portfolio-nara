@@ -18,6 +18,7 @@
     --color-muted: 128 110 92;
     --color-border: 38 31 22;
     --color-success: 72 163 104;
+    --color-danger: 248 113 113; /* 7.2:1 on bg */
   }
 
   /* ── Light mode ──────────────────────────────────────────── */
@@ -32,6 +33,7 @@
     --color-muted: 106 88 68;
     --color-border: 228 216 196;
     --color-success: 50 136 78;
+    --color-danger: 185 28 28; /* 6.1:1 on bg */
   }
 
   * {

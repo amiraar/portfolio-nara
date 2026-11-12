@@ -96,7 +96,7 @@ export default function VisitorForm({ onSubmit }) {
               onChange={(e) => { setName(e.target.value); if (nameError) setNameError(validateName(e.target.value)); }}
               onBlur={(e) => setNameError(validateName(e.target.value))}
               className={`w-full bg-background border rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder-text-muted outline-none focus:border-accent transition-colors ${
-                nameError ? "border-red-400/60" : "border-border"
+                nameError ? "border-danger/60" : "border-border"
               }`}
               disabled={loading}
               autoFocus
@@ -108,7 +108,7 @@ export default function VisitorForm({ onSubmit }) {
               </span>
             )}
           </div>
-          {nameError && <p className="text-[11px] text-red-400 pl-1">{nameError}</p>}
+          {nameError && <p className="text-[11px] text-danger pl-1">{nameError}</p>}
         </div>
 
         {/* Email field */}
@@ -120,12 +120,12 @@ export default function VisitorForm({ onSubmit }) {
             onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(validateEmail(e.target.value)); }}
             onBlur={(e) => setEmailError(validateEmail(e.target.value))}
             className={`w-full bg-background border rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder-text-muted outline-none focus:border-accent transition-colors ${
-              emailError ? "border-red-400/60" : "border-border"
+              emailError ? "border-danger/60" : "border-border"
             }`}
             disabled={loading}
             autoComplete="email"
           />
-          {emailError && <p className="text-[11px] text-red-400 pl-1">{emailError}</p>}
+          {emailError && <p className="text-[11px] text-danger pl-1">{emailError}</p>}
         </div>
 
         {/* Consent (UU PDP): explicit, never pre-checked */}
@@ -149,16 +149,16 @@ export default function VisitorForm({ onSubmit }) {
               .
             </span>
           </label>
-          {consentError && <p className="text-[11px] text-red-400 pl-1">{consentError}</p>}
+          {consentError && <p className="text-[11px] text-danger pl-1">{consentError}</p>}
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0">
-              <circle cx="6" cy="6" r="5" stroke="#f87171" strokeWidth="1.4"/>
-              <path d="M6 4v3M6 8.5v.1" stroke="#f87171" strokeWidth="1.4" strokeLinecap="round"/>
+          <div className="flex items-center gap-2 px-3 py-2 bg-danger/10 border border-danger/20 rounded-lg">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0 text-danger">
+              <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.4"/>
+              <path d="M6 4v3M6 8.5v.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
             </svg>
-            <p className="text-[11px] text-red-400">{error}</p>
+            <p className="text-[11px] text-danger">{error}</p>
           </div>
         )}
 

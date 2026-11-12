@@ -38,7 +38,7 @@ export default function LogViewer() {
       {/* Toolbar */}
       <div className="flex-shrink-0 flex items-center justify-between gap-3 px-5 py-3 border-b border-border bg-surface/30">
         <span className="font-mono text-[10px] text-text-muted">
-          {failed ? <span className="text-red-400">✗ Gagal memuat log</span> : `${logs.length} error terbaru · disimpan 90 hari`}
+          {failed ? <span className="text-danger">✗ Gagal memuat log</span> : `${logs.length} error terbaru · disimpan 90 hari`}
         </span>
         <button
           onClick={loadLogs}

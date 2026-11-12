@@ -83,7 +83,7 @@ export default function OwnerReply({ conversationId, disabled = false, onSent })
   return (
     <div className="p-4 border-t border-border bg-surface flex-shrink-0">
       {error && (
-        <p className="text-xs text-red-400 mb-2">{error}</p>
+        <p className="text-xs text-danger mb-2">{error}</p>
       )}
       <div className="flex items-end gap-2 bg-background rounded-xl border border-border px-3 py-2 focus-within:border-accent/40 transition-colors">
         <textarea
@@ -100,13 +100,13 @@ export default function OwnerReply({ conversationId, disabled = false, onSent })
         <button
           onClick={handleSend}
           disabled={sending || !value.trim()}
-          className="flex-shrink-0 w-8 h-8 rounded-lg bg-orange-400/80 hover:bg-orange-400 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex-shrink-0 w-8 h-8 rounded-lg bg-accent-2/80 hover:bg-accent-2 text-background flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           aria-label="Send reply"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path
               d="M13 1L1 5.5L6.5 7.5M13 1L8 13L6.5 7.5M13 1L6.5 7.5"
-              stroke="#0A0A0A"
+              stroke="currentColor"
               strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -116,7 +116,7 @@ export default function OwnerReply({ conversationId, disabled = false, onSent })
       </div>
       <p className="text-[10px] text-text-muted mt-1.5">
         Replying as{" "}
-        <span className="text-orange-400">Amirul</span> · visible to visitor in realtime
+        <span className="text-accent-2">Amirul</span> · visible to visitor in realtime
       </p>
     </div>
   );

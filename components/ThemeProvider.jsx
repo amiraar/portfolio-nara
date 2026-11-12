@@ -34,7 +34,7 @@ export function ThemeProvider({ children }) {
     // Update meta theme-color
     document.querySelector("meta[name='theme-color']")?.setAttribute(
       "content",
-      theme === "dark" ? "#0A0A0A" : "#F8F6F1"
+      theme === "dark" ? "#0B0907" : "#FCF8EE"
     );
   }, [theme]);
 

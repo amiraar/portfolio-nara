@@ -88,7 +88,7 @@ export default function MessageInput({ onSend, disabled = false }) {
           Powered by Kaia · AI Assistant
         </p>
         {showCounter && (
-          <p className={`font-mono text-[10px] ${remaining <= 50 ? "text-red-400" : "text-text-muted"}`}>
+          <p className={`font-mono text-[10px] ${remaining <= 50 ? "text-danger" : "text-text-muted"}`}>
             {remaining}
           </p>
         )}

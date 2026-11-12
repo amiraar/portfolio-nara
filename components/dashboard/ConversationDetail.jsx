@@ -67,7 +67,7 @@ export default function ConversationDetail({
               className={clsx(
                 "font-mono text-[10px] px-2 py-1 rounded border whitespace-nowrap",
                 isHuman
-                  ? "text-orange-400 border-orange-400/30 bg-orange-400/5"
+                  ? "text-accent-2 border-accent-2/30 bg-accent-2/5"
                   : "text-accent border-accent/30 bg-accent/5"
               )}
             >
@@ -89,7 +89,7 @@ export default function ConversationDetail({
                   <button
                     onClick={() => setShowConfirm("takeover")}
                     disabled={isTakingOver}
-                    className="text-xs text-orange-400 border border-orange-400/30 px-3 py-1 rounded-lg hover:bg-orange-400/5 transition-colors disabled:opacity-50"
+                    className="text-xs text-accent-2 border border-accent-2/30 px-3 py-1 rounded-lg hover:bg-accent-2/5 transition-colors disabled:opacity-50"
                   >
                     {isTakingOver ? <InlineSpinner label="Switching..." /> : "Takeover"}
                   </button>
@@ -168,7 +168,7 @@ const MemoizedMessageList = memo(function MemoizedMessageList({ messages }) {
                   isUser
                     ? "bg-accent/15 border border-accent/20 text-text-primary rounded-br-sm"
                     : isOwnerMsg
-                    ? "bg-surface border border-orange-400/20 text-text-primary rounded-bl-sm"
+                    ? "bg-surface border border-accent-2/20 text-text-primary rounded-bl-sm"
                     : "bg-surface border border-border text-text-primary rounded-bl-sm",
                   isPending && "opacity-70"
                 )}

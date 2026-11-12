@@ -111,7 +111,7 @@ export default function MessageList({ messages, isTyping }) {
       {/* Typing indicator */}
       {isTyping && (
         <div className="flex items-end gap-2">
-          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-accent to-purple-500 flex items-center justify-center flex-shrink-0">
+          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-accent to-accent-2 flex items-center justify-center flex-shrink-0">
             <span className="text-white text-[10px] font-mono">K</span>
           </div>
           <div className="glass-card bg-surface/80 rounded-2xl rounded-bl-sm px-4 py-3">
@@ -146,7 +146,7 @@ function MessageBubble({ message }) {
   return (
       <div className="flex items-end gap-2">
         {/* Avatar */}
-        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-accent to-purple-500 flex items-center justify-center flex-shrink-0">
+        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-accent to-accent-2 flex items-center justify-center flex-shrink-0">
           <span className="text-white text-[10px] font-mono">
             {isOwner ? "A" : "K"}
           </span>
