@@ -106,15 +106,33 @@ test("certificate viewer opens and closes", async ({ page }) => {
 });
 
 test("theme choice survives a reload", async ({ page }) => {
+  // Start from a known theme on the first load only, so the reload keeps the choice.
+  await page.addInitScript(() => {
+    if (!localStorage.getItem("nara-theme")) localStorage.setItem("nara-theme", "dark");
+  });
   await page.goto("/");
   const html = page.locator("html");
-  const toLight = page.getByRole("button", { name: "Switch to light mode" });
-  if (await toLight.isVisible()) await toLight.click();
+  await page.getByRole("button", { name: "Switch to light mode" }).click();
   await expect(html).toHaveClass(/light/);
   await page.reload();
   await expect(html).toHaveClass(/light/);
   await page.getByRole("button", { name: "Switch to dark mode" }).click();
   await expect(html).toHaveClass(/dark/);
+});
+
+test("a saved light theme never flashes dark while loading", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("nara-theme", "light");
+    window.__themeClasses = [];
+    // <html> does not exist yet when init scripts run, so watch the whole document.
+    new MutationObserver((mutations) => {
+      for (const m of mutations) if (m.target === document.documentElement) window.__themeClasses.push(m.target.className);
+    }).observe(document, { attributes: true, subtree: true, attributeFilter: ["class"] });
+  });
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Switch to dark mode" })).toBeVisible();
+  const classes = await page.evaluate(() => window.__themeClasses);
+  expect(classes.filter((c) => /\bdark\b/.test(c))).toEqual([]);
 });
 
 test("chat form needs consent and shows server errors", async ({ page }) => {
