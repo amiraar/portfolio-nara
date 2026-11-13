@@ -22,6 +22,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0, // a flaky test should be visible, not retried away
+  // Same as CI. With the local default (half the CPU cores) the browsers starve the
+  // freshly built server, and the first tests time out on slow responses.
+  workers: 2,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
