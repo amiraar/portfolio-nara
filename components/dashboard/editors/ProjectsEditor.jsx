@@ -77,7 +77,7 @@ export default function ProjectsEditor({ data, onChange }) {
             <div className="p-4 space-y-4 border-t border-border">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Project Name">
-                  <input className={inputCls} value={project.name} onChange={(e) => updateItem(i, { ...project, name: e.target.value })} placeholder="Racker" />
+                  <input className={inputCls} value={project.name} onChange={(e) => updateItem(i, { ...project, name: e.target.value })} placeholder="Project name" />
                 </Field>
                 <Field label="Type">
                   <input className={inputCls} value={project.type} onChange={(e) => updateItem(i, { ...project, type: e.target.value })} placeholder="Web App / AI Product / UX Design" />

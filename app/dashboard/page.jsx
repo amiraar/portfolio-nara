@@ -434,9 +434,9 @@ export default function DashboardPage() {
 
       {/* Error banner */}
       {error && (
-        <div className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-2 bg-red-400/8 border-b border-red-400/15">
-          <p className="font-mono text-xs text-red-400">{error}</p>
-          <button onClick={() => setError(null)} className="flex-shrink-0 text-red-400/60 hover:text-red-400 transition-colors font-mono text-xs">✕</button>
+        <div className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-2 bg-danger/8 border-b border-danger/15">
+          <p className="font-mono text-xs text-danger">{error}</p>
+          <button onClick={() => setError(null)} className="flex-shrink-0 text-danger/60 hover:text-danger transition-colors font-mono text-xs">✕</button>
         </div>
       )}
 
@@ -510,7 +510,7 @@ export default function DashboardPage() {
             </div>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-mono text-[11px] text-text-muted hover:text-red-400 hover:bg-red-400/8 transition-colors"
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-mono text-[11px] text-text-muted hover:text-danger hover:bg-danger/8 transition-colors"
             >
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M10 11l4-3-4-3M14 8H6"/>

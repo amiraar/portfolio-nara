@@ -18,6 +18,13 @@ module.exports = {
         "text-muted": "rgb(var(--color-muted) / <alpha-value>)",
         border: "rgb(var(--color-border) / <alpha-value>)",
         success: "rgb(var(--color-success) / <alpha-value>)",
+        danger: "rgb(var(--color-danger) / <alpha-value>)",
+      },
+      // Steps used by the design (bg-accent/8, hover:bg-accent/6) that the
+      // default opacity scale lacks; without them those classes emit no CSS.
+      opacity: {
+        6: "0.06",
+        8: "0.08",
       },
       fontFamily: {
         display: ["Fraunces", "Georgia", "serif"],

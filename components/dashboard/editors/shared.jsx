@@ -40,7 +40,7 @@ export function TagInput({ tags, onChange }) {
         {tags.map((t) => (
           <span key={t} className="flex items-center gap-1 bg-accent/10 text-accent border border-accent/20 text-xs font-mono px-2 py-0.5 rounded-md">
             {t}
-            <button type="button" onClick={() => remove(t)} className="ml-0.5 text-accent/60 hover:text-red-400 transition-colors leading-none">×</button>
+            <button type="button" onClick={() => remove(t)} className="ml-0.5 text-accent/60 hover:text-danger transition-colors leading-none">×</button>
           </span>
         ))}
       </div>
@@ -60,7 +60,7 @@ export function TagInput({ tags, onChange }) {
 export function BtnDanger({ onClick, children }) {
   return (
     <button type="button" onClick={onClick}
-      className="font-mono text-[11px] text-red-400/70 border border-red-400/20 px-2.5 py-1 rounded-lg hover:bg-red-400/10 hover:border-red-400/40 transition-colors">
+      className="font-mono text-[11px] text-danger/70 border border-danger/20 px-2.5 py-1 rounded-lg hover:bg-danger/10 hover:border-danger/40 transition-colors">
       {children}
     </button>
   );

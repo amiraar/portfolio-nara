@@ -203,7 +203,7 @@ export default function ContentEditor({ section, apiSection, onDirtyChange }) {
             <span className="font-mono text-[10px] text-success">✓ Saved</span>
           )}
           {saveStatus === "error" && (
-            <span className="font-mono text-[10px] text-red-400">✗ Failed to save</span>
+            <span className="font-mono text-[10px] text-danger">✗ Failed to save</span>
           )}
         </div>
 
@@ -236,13 +236,13 @@ export default function ContentEditor({ section, apiSection, onDirtyChange }) {
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-5 lg:p-6">
         {validationErrors.length > 0 && (
-          <div className="mb-5 border border-red-400/25 bg-red-400/8 rounded-xl p-4">
-            <p className="font-mono text-[10px] text-red-400 uppercase tracking-widest mb-2">
+          <div className="mb-5 border border-danger/25 bg-danger/8 rounded-xl p-4">
+            <p className="font-mono text-[10px] text-danger uppercase tracking-widest mb-2">
               Fix before saving:
             </p>
             <ul className="space-y-1">
               {validationErrors.map((err) => (
-                <li key={err} className="text-xs text-red-300 flex items-start gap-2">
+                <li key={err} className="text-xs text-danger flex items-start gap-2">
                   <span className="mt-0.5 flex-shrink-0">·</span>
                   {err}
                 </li>

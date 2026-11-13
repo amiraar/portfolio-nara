@@ -142,13 +142,14 @@ export default function Hero({ onChatOpen }) {
             {/* Stats */}
             <div
               data-reveal
-              className="mt-10 flex flex-wrap items-center gap-0"
+              className="mt-10 grid grid-cols-3 max-w-md"
               style={{ opacity: 0, transform: "translateY(14px)", transition: "all 0.65s cubic-bezier(0.16,1,0.3,1)" }}
             >
-              {stats.map((stat, index) => (
+              {/* Three equal columns, so the stats stay on one row from 360px up */}
+              {stats.map((stat) => (
                 <div
                   key={stat.label}
-                  className={`flex flex-col pr-8 mr-8 ${index === stats.length - 1 ? "border-r-0 pr-0 mr-0" : "border-r border-border/60"}`}
+                  className="flex flex-col px-3 sm:px-6 first:pl-0 border-l border-border/60 first:border-l-0"
                 >
                   <span className="font-display text-xl font-medium gradient-text">{stat.value}</span>
                   <span className="font-mono text-[10px] text-text-muted uppercase tracking-wide mt-0.5">{stat.label}</span>

@@ -431,7 +431,7 @@ export default function ChatWidget() {
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3.5 glass-card bg-gradient-to-r from-surface/80 via-surface/60 to-accent/10 flex-shrink-0">
-            <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-accent to-purple-500 flex items-center justify-center">
+            <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-accent to-accent-2 flex items-center justify-center">
               <span className="font-mono text-white text-sm">K</span>
               {/* Online dot */}
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-success border-2 border-surface" />
@@ -450,7 +450,7 @@ export default function ChatWidget() {
                     <p className="text-[11px] text-text-muted mb-2 leading-snug">Close this chat session? Your history stays on the server; use &quot;Delete my data&quot; to remove it.</p>
                     <div className="flex gap-2">
                       <button onClick={handleReset}
-                        className="flex-1 text-[11px] font-mono bg-red-500/15 text-red-400 border border-red-400/20 rounded-lg py-1 hover:bg-red-500/25 transition-colors">
+                        className="flex-1 text-[11px] font-mono bg-danger/15 text-danger border border-danger/20 rounded-lg py-1 hover:bg-danger/25 transition-colors">
                         Reset
                       </button>
                       <button onClick={() => setShowResetConfirm(false)}
@@ -464,7 +464,7 @@ export default function ChatWidget() {
                         Download my data
                       </button>
                       <button onClick={handleDeleteData}
-                        className="text-left text-[11px] text-red-400/80 hover:text-red-400 transition-colors">
+                        className="text-left text-[11px] text-danger/80 hover:text-danger transition-colors">
                         Delete my data
                       </button>
                     </div>
@@ -504,11 +504,11 @@ export default function ChatWidget() {
             <>
               <MessageList messages={messages} isTyping={isTyping} />
               {sendError && (
-                <div className="mx-3 mb-1 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start justify-between gap-2">
-                  <p className="text-[11px] text-red-400 leading-snug">{sendError}</p>
+                <div className="mx-3 mb-1 px-3 py-2 bg-danger/10 border border-danger/20 rounded-lg flex items-start justify-between gap-2">
+                  <p className="text-[11px] text-danger leading-snug">{sendError}</p>
                   <button
                     onClick={() => setSendError(null)}
-                    className="flex-shrink-0 text-red-400/60 hover:text-red-400 transition-colors"
+                    className="flex-shrink-0 text-danger/60 hover:text-danger transition-colors"
                     aria-label="Dismiss error"
                   >
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="none">

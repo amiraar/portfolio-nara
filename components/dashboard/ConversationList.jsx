@@ -88,7 +88,7 @@ export default function ConversationList({ conversations, selectedId, onSelect }
                 className={clsx(
                   "font-mono text-[9px] px-1.5 py-0.5 rounded border",
                   isHuman
-                    ? "text-orange-400 border-orange-400/30 bg-orange-400/5"
+                    ? "text-accent-2 border-accent-2/30 bg-accent-2/5"
                     : "text-accent border-accent/30 bg-accent/5"
                 )}
               >
